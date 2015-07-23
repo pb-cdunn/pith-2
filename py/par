@@ -1,0 +1,185 @@
+#!/usr/bin/env python2.7
+from __future__ import print_function
+from util import log, system, symlink, mkdirp, safeRm, safeRmTree, updatesymlinks, recdefaultdict, getgithubname
+import argparse
+import ConfigParser as configparser
+import json
+import os
+import sys
+
+# path to //depot/software/smrtanalysis
+SMRTANALYSIS_DIR_DEFAULT = '.'
+# where mobs expects the module dirs
+ALTSRC_DIR_DEFAULT = 'altsrc'
+# for tarballs
+CURL_DIR_DEFAULT = 'CURL_DIR'
+# for tarball extractions, as opposed to real git repos
+UNTAR_DIR_DEFAULT = 'UNTAR_DIR'
+# for workspace file(s)
+WS_DIR_DEFAULT = 'my-paws'
+WS_DIR_DEFAULT = '.'
+# paws workspace description filename, relative to WS_DIR
+PAWS_FILE_DEFAULT = '.paws.json'
+
+
+def gettarballroot(fn):
+    """Handy helper, not used today.
+    """
+    cmds = ['tar tf {}'.format(fn), 'head -n 1']
+    o = capture(' | '.join(cmds)).strip()
+    log('cap: {!r}'.format(o))
+def curlifmissing(url, fn):
+    log("curlifmissing:", url, fn)
+    if not os.path.isfile(fn):
+        cmd = 'curl -k -o {fn} -L {url}'.format(
+                fn=fn, url=url)
+        system(cmd)
+    assert os.path.isfile(fn)
+def curlgithubrepo(remote, ref, outdir, CURL_DIR):
+    """
+URL:=https://github.com/${NAME}/archive/${REF}.tar.gz
+ARCH:=archive.${SUBDIR}.tar.gz
+MY_INIT:=curl -k -o ${ARCH} -L ${URL}; ROOT=$$(tar tf ${ARCH} | head -n 1); tar xf ${ARCH}; rsync -az $${ROOT}/ ${REPO_DIR}/
+"""
+    log('curlgithubrepo', remote, ref, outdir)
+    github_name = getgithubname(remote)
+    url = 'https://github.com/{GITHUB_NAME}/archive/{REF}.tar.gz'.format(
+            GITHUB_NAME=github_name, REF=ref)
+    repo_name = github_name.split('/')[1]
+    archive_base = 'archive.{NAME}.{REF}.tar.gz'.format(
+            NAME=repo_name,
+            REF=ref)
+    archive_fn = os.path.join(CURL_DIR, archive_base)
+    curlifmissing(url, archive_fn)
+    #root = gettarballroot(archive_fn) # not needed with --strip-components
+    mkdirp(outdir)
+    os.chmod(outdir, 0777)
+    # Someday, add v for verbose, optionally.
+    cmd = 'tar xf {ARCHIVE} --strip-components 1 -C {DIR}'.format(
+        ARCHIVE=archive_fn, DIR=outdir)
+    os.chmod(archive_fn, 0666)
+    system(cmd)
+def curl(cfg, pkgs, CURL_DIR, UNTAR_DIR):
+    """GET the named packages (http).
+    Always create a fresh output directory.
+    Not for development. Could be used by nightly build eventually.
+    """
+    mkdirp(CURL_DIR)
+    mkdirp(UNTAR_DIR)
+    for pkg in pkgs:
+        outdir = os.path.join(UNTAR_DIR, pkg)
+        safeRmTree(outdir)
+        url = cfg.get(pkg, 'url')
+        ref = cfg.get(pkg, 'ref')
+        curlgithubrepo(url, ref, outdir, CURL_DIR)
+def sync(cfg, pkgs, curl_dir, untar_dir, altsrc_dir, **ignored):
+    curl(cfg, pkgs, curl_dir, untar_dir)
+    updatesymlinks(os.path.abspath(untar_dir), altsrc_dir, pkgs)
+def ws(cfg, pkgs, ws_dir, paws_file, smrtanalysis_dir, altsrc_dir, **ignored):
+    wsf = recdefaultdict()
+    wsf['p4']['smrtanalysis_dir'] = smrtanalysis_dir
+    for pkg in pkgs:
+        items = dict(cfg.items(pkg))
+        log('items:', items)
+        repo = dict()
+        repo['remote'] = items['url']
+        repo['ref'] = items['ref']
+        repo['pre'] = items['pre']
+        repo['mods'] = items['mod'].split(',')
+        wsf['git']['repos'][pkg] = repo
+    log(json.dumps(wsf))
+    mkdirp(ws_dir)
+    open(paws_file, 'w').write(json.dumps(wsf))
+def readConfig(fn):
+    cp = configparser.ConfigParser()
+    cp.readfp(open(fn))
+    for section in cp.sections():
+        log("SECTION:", section, cp.items(section))
+    return cp
+def par(args):
+    assert args.smrtanalysis_dir
+    configfn = os.path.join(args.smrtanalysis_dir, args.git_ext)
+    cfg = readConfig(configfn)
+    known_pkgs = cfg.sections()
+    if not args.pkgs:
+        args.pkgs = known_pkgs
+    else:
+        args.pkgs = args.pkgs.split(',')
+        assert not (set(args.pkgs) - set(known_pkgs)), repr(set(args.pkgs) - set(known_pkgs))
+    args.altsrc_dir = os.path.join(args.smrtanalysis_dir, args.altsrc_dir)
+    log('args:', args)
+    if args.subcommand == 'sync':
+        sync(cfg, **vars(args))
+    elif args.subcommand == 'ws':
+        args.paws_file = os.path.join(args.ws_dir, args.paws_file)
+        ws(cfg, **vars(args))
+    else:
+        # theoretically impossible
+        raise Exception()
+
+def parseargs(args):
+    des = 'Pacbio Alternate Repositories'
+    epi = 'Some source-code is hosted in GitHub. "par" can find those repos based on a config file in P4.'
+    parser = argparse.ArgumentParser(
+        epilog=epi,
+        description=des)
+    parser.add_argument('--smrtanalysis-dir', default=SMRTANALYSIS_DIR_DEFAULT,
+        help='Path to "smrtanalysis" in P4 tree. Can be relative to CWD. [default=%(default)r]')
+    parser.add_argument('--git-ext', default='git-ext.ini',
+        help='Path (relative to "smrtanalysis" directory) to config file which describes our GitHub repos and SHAs. Stored in P4. ConfigParser format. [default=%(default)r]')
+    parser.add_argument('--altsrc-dir', default=ALTSRC_DIR_DEFAULT,
+        help='Path (relative to "smrtanalysis" directory) for the `mobs` "altsrc" tree. [default=%(default)r]')
+    parser.add_argument('--pkgs',
+        help='Specific packages to use, as a comma-separated list. Otherwise, use all known packages.')
+
+    adder = parser.add_subparsers(
+        dest='subcommand',
+        title='subcommands',
+        help='"par sync --help", etc.')
+
+    sub = adder.add_parser('sync',
+        help='Sync GitHub-hosted packages to their P4 SHA1s, ready for `mobs`.',
+        description='Sync GitHub-hosted packages to their P4 SHA1s, ready for `mobs`. (Actually `amobs`.) This does not use Git at all, and it will refresh the repos everytime.' + \
+            'Sync packages are not managed by `git`. We fetch them from GitHub via `curl` and `untar` them into UNTAR_DIR. Packages are then symlinked in `smrtanalysis/altsrc` and can thus co-exist with a `paws` workspace if desired.')
+    sub.add_argument('--curl-dir', default=CURL_DIR_DEFAULT,
+        help='Cache tarballs here. [default=%(default)r]')
+    sub.add_argument('--untar-dir', default=UNTAR_DIR_DEFAULT,
+        help='Untar tarballs here. Always rmtree first, for a clean nightly build. [default=%(default)r]')
+
+    sub = adder.add_parser('ws',
+        help='Prepare a workspace of Git repos, to be managed by `paws`, ready for `amobs`.',
+        description='Prepares a workspace of Git repos, to be managed by `paws`, ready for `amobs`.' + \
+            'Merely creates (or over-write) the `.ws.json` file, to manage the workspace. Existing repos are safe, and altsrc symlinks are not altered.')
+    sub.add_argument('--ws-dir', default=WS_DIR_DEFAULT,
+        help='The workspace will be described by `.ws.json` in WS_DIR. After creation, User can cd into WS_DIR to use `paws`. [default=%(default)r]')
+    sub.add_argument('--paws-file', default=PAWS_FILE_DEFAULT,
+        help='The name (relative to WS_DIR) of the `paws` workspace description file to generate. `paws` always looks for this file in the current directory. [default=%(default)r]')
+
+    return parser.parse_args(args)
+
+
+def findSmrtanalysisDir():
+    envkey = 'SMRTANALYSIS_DIR'
+    if envkey in os.environ:
+        return os.path.expanduser(os.environ[envkey])
+    basename = 'smrtanalysis'
+    sdir = os.getcwd()
+    while sdir and sdir != '/':
+        log(sdir)
+        if os.path.basename(sdir) == basename:
+            return sdir
+        sdir = os.path.dirname(sdir)
+    return None
+    
+def main(prog, *args):
+    global SMRTANALYSIS_DIR_DEFAULT
+    SMRTANALYSIS_DIR_DEFAULT = findSmrtanalysisDir()
+    pargs = parseargs(args)
+    try:
+        par(pargs)
+    except Exception:
+        log(repr(vars(pargs)))
+        raise
+
+if __name__ == "__main__":
+    main(*sys.argv)

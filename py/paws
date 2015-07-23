@@ -1,0 +1,274 @@
+#!/usr/bin/env python
+"""
+Workspace operations for Git packages which are built with 'mobs'.
+
+Note: We use 'package' for Git repositories. Mobs uses 'module' for
+things it builds in Perforce. There can be multiple 'modules' for a given
+'package'.
+
+And always, please avoid filenames with spaces and weird characters. We might
+not quote all arguments properly.
+"""
+from __future__ import print_function
+from util import cd, log, system, capture, symlink, mkdirp, safeRm, safeRmTree, updatesymlinks, getgithubname
+import argparse
+import json
+import os
+import pprint
+import subprocess
+import sys
+import traceback
+import ConfigParser as configparser
+import StringIO
+
+# paws workspace description filename, relative to WS_DIR
+PAWS_FILE_DEFAULT = '.paws.json'
+# where mobs expects the module dirs
+ALTSRC_DIR_DEFAULT = 'altsrc'
+# where mobs expects the module dirs
+ALTSRC_DIR = '/home/UNIXHOME/cdunn/repo/pb/smrtanalysis-client/smrtanalysis/altsrc'
+# where the git repos live
+GIT_REPOS_DIR_DEFAULT = 'GIT_REPOS_DIR'
+
+def gitClone(remote, dirname):
+    try:
+        gitCloneCached(remote, dirname)
+    except Exception:
+        log(traceback.format_exc())
+        safeRmTree(dirname)
+        mkdirp(dirname)
+        Git(dirname).init().remoteAdd('origin', remote)#.fetch('origin')
+WS_GIT_CACHE = '~/ws-git-cache'
+def gitCloneCached(remote, dirname):
+    """Create a cache of the remote so we can re-clone quickly.
+    """
+    cachedir = os.path.expanduser(WS_GIT_CACHE)
+    mkdirp(cachedir)
+    repoalt = os.path.join(cachedir, os.path.basename(dirname))
+    if not os.path.exists(repoalt):
+        system('git clone {} {}'.format(remote, repoalt))
+    if not os.path.exists(dirname):
+        # Avoid unnecessary GitHub transfers by using a reference repo.
+        system('git clone --reference {} {} {}'.format(repoalt, remote, dirname))
+        # As of git-2.3, we could use 'git clone --disassociate'.
+        with cd(dirname):
+            system('git repack -a -d') # to ensure we have our own copies
+            safeRm('.git/objects/info/alternates')
+            #system('git fetch') # later
+class Git(object):
+    def checkout(self, ref):
+        system(self.git('checkout {}'.format(ref)))
+    def fetch(self, name='origin', ref=None):
+        if ref:
+            system(self.git('fetch {} {}'.format(name, ref)))
+        else:
+            system(self.git('fetch {}'.format(name)))
+    def remoteAdd(self, name, remote):
+        """'remote' can be a simple filesystem path.
+        """
+        try:
+            capture(self.git('remote rm {}'.format(name)))
+        except subprocess.CalledProcessError:
+            pass
+        system(self.git('remote add {} {}'.format(name, remote)))
+        return self
+    def init(self):
+        """Require directory to exist already.
+        """
+        system(self.git('init'))
+        return self
+    def git(self, argstring):
+        return 'git --git-dir .git -C {path} '.format(path=self.path) + argstring
+    def __init__(self, path):
+        self.path = path
+
+class GitRepo(object):
+    def __repr__(self):
+        return repr(self.spec)
+    def __init__(self, repo_spec):
+        self.spec = repo_spec
+def getgitrepos(PAWS):
+    git_repo_map = dict() # name -> GitRepo
+    for name, desc in PAWS['git']['repos'].items():
+        git_repo_map[name] = GitRepo(desc)
+    return git_repo_map
+def getgithubcomparelink(remote, ref, base):
+    """
+    https://github.com/PacificBiosciences/blasr/compare/${PRE}...${REF}
+    """
+    githubname = getgithubname(remote)
+    return 'https://github.com/{NAME}/compare/{PRE}...{REF}'.format(
+        NAME=githubname, PRE=base, REF=ref)
+def getp4log(ref, base):
+    """This is run in the git repo itself.
+    """
+    cmd = 'git log --pretty=fuller --name-status {PRE}...{REF}'.format(
+        PRE=base, REF=ref)
+    return capture(cmd)
+def getcurrentgitref():
+    """This is run in the git repo itself.
+    """
+    cmd = 'git rev-parse --verify HEAD'
+    return capture(cmd).strip()
+def readConfig(fn):
+    cp = configparser.ConfigParser()
+    cp.readfp(open(fn))
+    for section in cp.sections():
+        log("SECTION:", section, cp.items(section))
+    return cp
+def command_submit(PAWS, smrtanalysis_dir, pkgs, git_ext, git_repos_dir, **ignored):
+    git_ext_fn = os.path.join(smrtanalysis_dir, git_ext)
+    cfg = readConfig(git_ext_fn)
+    p4log = '' 
+    with cd(git_repos_dir):
+        for pkg in pkgs:
+            url = cfg.get(pkg, 'url')
+            ref = cfg.get(pkg, 'ref')
+            pre = cfg.get(pkg, 'pre')
+            with cd(pkg):
+                newref = getcurrentgitref()
+                if newref == ref:
+                    continue
+                p4log += getgithubcomparelink(url, newref, ref) + '\n'
+                p4log += getp4log(newref, ref)
+                cfg.set(pkg, 'pre', ref)
+                cfg.set(pkg, 'ref', newref)
+    if not p4log:
+        # TODO: Not an exception?
+        raise Exception('Nothing has changed.')
+    p4log += 'bug ???\n'
+    log('p4log:', p4log)
+    fp = StringIO.StringIO()
+    cfg.write(fp)
+    log('cfg:', fp.getvalue())
+def command_init(SPEC, PAWS, pkgs, git_repos_dir, **ignored):
+    """Create a git directory for all named packages,
+    but do not populate.
+    """
+    mkdirp(git_repos_dir)
+    repos = getgitrepos(PAWS)
+    log(pprint.pformat(repos))
+    for pkg in pkgs:
+        repodir = os.path.join(git_repos_dir, pkg)
+        url = repos[pkg].spec['remote']
+        if not os.path.exists(repodir):
+            gitClone(url, repodir)
+        git = Git(repodir)
+        git.remoteAdd('origin', url)
+def command_sync(PAWS, pkgs, remote='origin'):
+    repos = getgitrepos(PAWS)
+    for pkg in pkgs:
+        repo = repos[pkg]
+        log(repr(repo))
+        ref = repo.spec['ref']
+        repodir = os.path.join(GIT_REPOS_DIR, pkg)
+        git = Git(repodir)
+        git.fetch(remote, ref)
+        git.checkout(ref) # or 'FETCH_HEAD'
+        #Git().clone(desc['remote'], dirname)
+def getneeded():
+    """If pkgs are not names on the command-line,
+    then we will look for everything that we know about.
+    """
+    needed = set()
+    for kv in SPEC['mobs']['mods'].items():
+        log(kv)
+        pkg, git_path = kv
+        pkg = git_path.split('/')[0]
+        needed.add(pkg)
+    return needed
+def command_mobsify(pkgs, git_repos_dir, altsrc_dir, **ignored):
+    log('pkgs:', pkgs)
+    mkdirp(altsrc_dir)
+    updatesymlinks(os.path.abspath(git_repos_dir), altsrc_dir, pkgs)
+def command_git(pkgs, git_repos_dir, git_command, **ignored):
+    log('pkgs:', pkgs)
+    with cd(git_repos_dir):
+        for pkg in pkgs:
+            with cd(pkg):
+                cmd = 'git ' + git_command
+                system(cmd)
+def paws(args):
+    specfile='.ws.json'
+    log('specfile:', specfile)
+    global SPEC
+    SPEC = json.loads(open(specfile).read())
+    log('paws_file:', args.paws_file)
+    PAWS = json.loads(open(args.paws_file).read())
+    known_pkgs = PAWS['git']['repos']
+    if not args.pkgs:
+        args.pkgs = known_pkgs
+    else:
+        args.pkgs = args.pkgs.split(',')
+        assert not (set(args.pkgs) - set(known_pkgs)), repr(set(args.pkgs) - set(known_pkgs))
+    smrtanalysis_dir = PAWS['p4']['smrtanalysis_dir']
+    args.altsrc_dir = os.path.join(smrtanalysis_dir, args.altsrc_dir)
+    if args.subcommand == 'init':
+        command_init(SPEC, PAWS, **vars(args))
+    elif args.subcommand == 'mobsify':
+        command_mobsify(**vars(args))
+    elif args.subcommand == 'git':
+        command_git(**vars(args))
+    elif args.subcommand == 'submit':
+        command_submit(PAWS, smrtanalysis_dir, **vars(args))
+    else:
+        # theoretically impossible
+        raise Exception()
+def parseargs(args):
+    des = 'Pacbio Alternate Work Space'
+    epi = 'Some source-code is hosted in GitHub. `paws` helps you to work with those repositories. Most settings are in the PAWS_FILE.'
+    parser = argparse.ArgumentParser(
+        epilog=epi,
+        description=des)
+    parser.add_argument('--paws-file', default=PAWS_FILE_DEFAULT,
+        help='The name of the `paws` workspace description file (generated by `par`). `paws` always looks for this file in the current directory. [default=%(default)r]')
+    parser.add_argument('--git-repos-dir', default=GIT_REPOS_DIR_DEFAULT,
+        help='The directory under which the Git repos will be cloned. [default=%(default)r]')
+    parser.add_argument('--pkgs',
+        help='Specific packages to use, as a comma-separated list. Otherwise, use all known packages.')
+
+    adder = parser.add_subparsers(
+        dest='subcommand',
+        title='subcommands',
+        help='"paws init --help", etc.')
+
+    sub = adder.add_parser('init',
+        help='Clone packages from GitHub.',
+        description='Clone packages from GitHub. This should be the first subcommand used after `par`.')
+
+    sub = adder.add_parser('update',
+        help='Fetch current SHA1s from GitHub.',
+        description='Fetch current SHA1s from GitHub. Similar to `git submodule update`, leave HEAD detached in each repo.')
+
+    sub = adder.add_parser('mobsify',
+        help='Symlink these packages in altsrc, for mobs.',
+        description='Symlink these packages in altsrc, for mobs. Actually, we currently symlink *all* packages under GIT_REPOS_DIR.' + \
+            'This will allow `amobs` to wrap mobs properly.')
+    parser.add_argument('--altsrc-dir', default=ALTSRC_DIR_DEFAULT,
+        help='Path (relative to "smrtanalysis" directory) for the `mobs` "altsrc" tree. [default=%(default)r]')
+
+    sub = adder.add_parser('submit',
+        help='Create the p4 log for submission, and a new version of our .ini file.',
+        description='Create the p4 log for submission, and a new version of our .ini file. ' + \
+            'Someday this might also run "p4 submit".')
+    sub.add_argument('--git-ext', default='git-ext.ini',
+        help='Path (relative to "smrtanalysis" directory) to config file which describes our GitHub repos and SHAs. Stored in P4. ConfigParser format. [default=%(default)r]')
+
+    sub = adder.add_parser('git',
+        help='Run a git command in each package.',
+        description='Run a git command in each package, similar to git-slave.')
+    sub.add_argument('git_command',
+        help='The command to run (probably quoted).')
+
+    return parser.parse_args(args)
+
+def main(prog, *args):
+    pargs = parseargs(args)
+    try:
+        paws(pargs)
+    except Exception:
+        log(repr(vars(pargs)))
+        raise
+
+if __name__ == "__main__":
+    main(*sys.argv)
