@@ -1,0 +1,22 @@
+#!/usr/bin/env python
+"""Show github 'compare' links for changes to submodules.
+
+Assume that submodule paths match names.
+
+Do not alter anything. (So this is safe to run anytime.)
+
+Typical use:
+    git add blasr
+    $0 >> p4.log
+"""
+import sys
+import util
+
+
+def main(prog):
+    text = ''.join('* %s\n' %(url) for url in util.yield_compare_urls(False))
+    sys.stdout.write(text)
+
+
+if __name__=="__main__":
+    main(*sys.argv)

@@ -1,5 +1,9 @@
+"""
+Require Python2 >= 2.6.6
+"""
 from __future__ import print_function
 from pipes import quote
+import commands # b/c we are missing subprocess.check_output
 import collections
 import contextlib
 import os
@@ -36,7 +40,7 @@ def cd(path):
 
 
 def system(call, dry_run=False):
-    log('system({!r})'.format(call))
+    log('system(%r)' %(call))
     if not dry_run:
         subprocess.check_call(call, shell=True)
 
@@ -49,13 +53,13 @@ def mkdirp(dirpath):
 
 def safeRm(path):
     if os.path.exists(path):
-        log('rm -f {!r}'.format(path))
+        log('rm -f %r' %(path))
         os.unlink(path)
 
 
 def safeRmTree(dirpath):
     if os.path.exists(dirpath):
-        log('rm -rf {!r}'.format(dirpath))
+        log('rm -rf %r' %(dirpath))
         assert os.getcwd() in os.path.abspath(dirpath), dirpath
         shutil.rmtree(dirpath)
 
@@ -64,7 +68,7 @@ def symlink(src, dst):
     """Link from src to dst.
     Fail if any dst path exists and is not a symlink.
     """
-    log('ln -sf {!r} {!r}'.format(
+    log('ln -sf %r %r' %(
         src, dst))
     if os.path.islink(dst):
         os.unlink(dst)
@@ -76,11 +80,16 @@ def capture(call):
     For discussion of SIGPIPE, see:
       http://bugs.python.org/issue1652
     """
-    log('`{!r}`'.format(call))
+    log('`%s`' %(call))
     prev = signal.getsignal(signal.SIGPIPE)
     signal.signal(signal.SIGPIPE, signal.SIG_DFL)
     try:
-        output = subprocess.check_output(call, shell=True)
+        #output = subprocess.check_output(call, shell=True)
+        # no check_output in Python2.6.6
+        # Why do we need a shell? I do not remember. Try without.
+        status, output = commands.getstatusoutput(call)
+        if status:
+            raise Exception('%d <= %r' %(status, call))
     except:
         signal.signal(signal.SIGPIPE, prev)
         raise
@@ -112,3 +121,35 @@ def getgithubname(remote):
         warnings.warn('%r does not look like a github name. It should be "account/repo". It came from %r'%(
             githubname, remote))
     return githubname
+
+
+def summary2table(summary):
+    """
+    * pith a4069a7...882571f (1):
+      > copied some files from my-ws
+    
+    =>
+    {'pith': 'a4069a7...882571f'}
+    """
+    table = dict()
+    re_sha1line = re.compile('^\*\s+(\S+)\s+(\S+)')
+    for mo in re_sha1line.finditer(summary):
+        name, crange = mo.groups()
+        table[name] = crange
+    return table
+
+
+def yield_compare_urls(cached=True):
+    """For all cached submodules, yield links like this:
+        'https://github.com/PacificBiosciences/pith/compare/a4069a7...882571f'
+    """
+    flags = ' --cached' if cached else ''
+    commit_table = summary2table(capture('git submodule summary%s' %(
+        flags)))
+    for (name, crange) in commit_table.items():
+        url = capture('git config submodule.%s.url' %(
+            name))
+        githubname = getgithubname(url)
+        compare_url = 'https://github.com/%s/compare/%s' %(
+            githubname, crange)
+        yield compare_url
