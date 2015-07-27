@@ -132,7 +132,7 @@ def summary2table(summary):
     {'pith': 'a4069a7...882571f'}
     """
     table = dict()
-    re_sha1line = re.compile('^\*\s+(\S+)\s+(\S+)')
+    re_sha1line = re.compile('^\*\s+(\S+)\s+(\S+)', re.MULTILINE)
     for mo in re_sha1line.finditer(summary):
         name, crange = mo.groups()
         table[name] = crange

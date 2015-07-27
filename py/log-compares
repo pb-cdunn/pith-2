@@ -14,7 +14,7 @@ import util
 
 
 def main(prog):
-    text = ''.join('* %s\n' %(url) for url in util.yield_compare_urls(False))
+    text = ''.join('* %s\n' %(url) for url in util.yield_compare_urls())
     sys.stdout.write(text)
 
 
