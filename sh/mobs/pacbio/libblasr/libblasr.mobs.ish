@@ -1,0 +1,70 @@
+# libblasr
+local modname="$(basename "${BASH_SOURCE[0]}" .mobs.ish)";
+local modname_short=${modname%%_*}
+v_setvar "$modname" internal provides "$modname_short"
+
+local builddeps="
+    git
+    make
+    gcc
+    boost
+    hdf5
+    zlib
+    htslib
+    pbbam
+    libpbdata
+    libpbihdf
+    # Needed for unittest only:
+    gtest
+";
+# Strip out comments in the builddeps
+builddeps=$(echo "$builddeps" | grep -v -E '^[[:space:]]*#')
+v_setvar "$modname" internal builddeps "$builddeps"
+
+# releaseinstall.sh expects this path
+local installdir_reltop="bioinformatics/ext/pi/blasr_libcpp/alignment"
+local outputdir_reltop="$installdir_reltop/$g_output_dirname"
+
+local builddir_abs="$g_build_topdir/build/3.x/buildctl/pacbio/$modname_short"
+local outputdir_abs="$g_output_topdir/$outputdir_reltop"
+local installdir_abs="$outputdir_abs/install"
+local installunittestdir_abs="$outputdir_abs/unittest"
+local runtimelibdir_reltop="$outputdir_reltop/install/lib"
+local runtimelibdir_abs="$g_output_topdir/$runtimelibdir_reltop"
+
+local rootdir_reltop="bioinformatics/ext/pi/blasr_libcpp/alignment"
+local srcdir_abs="$g_build_topdir/$rootdir_reltop"
+
+if [ ! -d "${srcdir_abs}" ]; then
+echo '--------- YOU DO NOT HAVE THE LATEST blasr_libcpp CODE! run smrtanalysis/pb-sync ------------' 1>&2
+exit 1
+fi
+
+v_setvar "$modname" output output_dir "$outputdir_abs"
+v_setvar "$modname" output src_dir "$srcdir_abs"
+v_setvar "$modname" output build_dir "$builddir_abs"
+v_setvar "$modname" output install_dir "$installdir_abs"
+v_setvar "$modname" output install_include_dir "$installdir_abs/include"
+v_setvar "$modname" output install_lib_dir "$installdir_abs/lib"
+v_setvar "$modname" output installunittest_dir "$installunittestdir_abs"
+v_setvar "$modname" output runtimelib_dir_reltop "$runtimelibdir_reltop"
+v_setvar "$modname" output runtimelib_dir "$runtimelibdir_abs"
+
+v_setvar "$modname" internal clean_cmd "bash $builddir_abs/buildctl.sh --mobs --clean"
+v_setvar "$modname" internal build_cmd "bash $builddir_abs/buildctl.sh --mobs --install-build"
+v_setvar "$modname" internal unittest_cmd "bash $builddir_abs/buildctl.sh --mobs --install-build --unittest"
+
+# We use git to learn files or SHA1.
+g_git_rootdir="$g_build_topdir/prebuilt.tmpout/git/git_2.4.5/libc-2.5/gcc-4.8.4"
+g_git_exe="${g_git_rootdir}/bin/git"
+
+# Checks for skipping builds (for incremental builds)
+# This will generate $modname.infilestat.prebuild.out
+#v_setvar "$modname" buildstate-prebuild infilestat "find $builddir_abs/buildctl.sh $srcdir_abs/ $srcdir_abs -path $outputdir_abs -prune -o ! -type d -printf '%T@,%m,%s,%y,%p,%l\n' | sort -n"
+v_setvar "$modname" buildstate-prebuild infilestat "{ find $builddir_abs/buildctl.sh -printf '%T@,%m,%s,%y,%p,%l\n' | sort -n; $g_git_exe -C $srcdir_abs rev-parse HEAD; }"
+
+# This will generate $modname.vardump.prebuild.out
+v_setvar "$modname" buildstate-prebuild vardump "v_printmodvars ${modname%%_*}"
+
+# This will generate $modname.outfilestat.postbuild.out
+v_setvar "$modname" buildstate-postbuild outfilestat "find $installdir_abs ! -type d -printf '%T@,%m,%s,%y,%p,%l\n' | sort -n"
