@@ -1,3 +1,4 @@
+# vim: syntax=conf
 local modname=daligner
 local modname_short=${modname%%_*}
 v_setvar "$modname" internal provides "$modname_short"
@@ -30,7 +31,7 @@ v_setvar "$modname" output installunittest_dir "$installunittestdir_abs"
 v_setvar "$modname" output install_binwrapbuild_dir "$installdir_abs/binwrap-build"
 
 v_setvar "$modname" internal clean_cmd "bash $buildctl_sh clean"
-v_setvar "$modname" internal build_cmd "bash $buildctl_sh build instll"
+v_setvar "$modname" internal build_cmd "bash $buildctl_sh build install"
 v_setvar "$modname" internal unittest_cmd "bash $buildctl_sh build install unittest"
 
 
@@ -48,4 +49,5 @@ v_setvar "$modname" buildstate-prebuild infilestat "{ find $buildctl_sh -printf 
 v_setvar "$modname" buildstate-prebuild vardump "v_printmodvars ${modname%%_*}"
 
 # This will generate $modname.outfilestat.postbuild.out
+mkdir -p "$installdir_abs"
 v_setvar "$modname" buildstate-postbuild outfilestat "find $installdir_abs ! -type d -printf '%T@,%m,%s,%y,%p,%l\n' | sort -n"
