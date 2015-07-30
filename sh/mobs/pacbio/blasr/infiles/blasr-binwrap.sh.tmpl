@@ -1,0 +1,54 @@
+#!/bin/bash
+
+# ---- error handling
+set -o errexit;
+set -o posix;
+set -o pipefail;
+set -o errtrace;
+unexpected_error() {
+    local errstat=$?
+    echo "${g_prog:-$(basename $0)}: Error! Encountered unexpected error at 'line $(caller)', bailing out..." 1>&2
+    exit $errstat;
+}
+trap unexpected_error ERR;
+
+# Force the path to only what we need, saving off the original path
+PATH_ORIG=$PATH;
+PATH=/usr/bin:/bin
+
+g_prog=$(basename "$0");
+g_progdir=$(dirname "$0");
+g_progdir_abs=$(dirname $(readlink -f "$0"));
+
+# ---- error functions
+merror() {
+    echo "$g_prog: Error! ""$@" 1>&2;
+    exit 1;
+}
+minterror() {
+    echo "$g_prog: Internal Error! ""$@" 1>&2;
+    exit 1;
+}
+mwarn() {
+    echo "$g_prog: Warning! ""$@" 1>&2;}
+
+
+# ---- global
+
+g_exe="${g_progdir_abs}/../bin/%PROGNAME%"
+
+g_ldlibdirs=""
+g_ldlibdirs="$g_ldlibdirs:${g_progdir_abs}/%TOPDIR_RELPROG%/%LIBBLASR_RUNTIMELIB_RELTOP%"
+g_ldlibdirs="$g_ldlibdirs:${g_progdir_abs}/%TOPDIR_RELPROG%/%LIBPBIHDF_RUNTIMELIB_RELTOP%"
+g_ldlibdirs="$g_ldlibdirs:${g_progdir_abs}/%TOPDIR_RELPROG%/%LIBPBDATA_RUNTIMELIB_RELTOP%"
+g_ldlibdirs="$g_ldlibdirs:${g_progdir_abs}/%TOPDIR_RELPROG%/%PBBAM_RUNTIMELIB_RELTOP%"
+g_ldlibdirs="$g_ldlibdirs:${g_progdir_abs}/%TOPDIR_RELPROG%/%HTSLIB_RUNTIMELIB_RELTOP%"
+g_ldlibdirs="$g_ldlibdirs:${g_progdir_abs}/%TOPDIR_RELPROG%/%HDF5_RUNTIMELIB_RELTOP%"
+g_ldlibdirs="$g_ldlibdirs:${g_progdir_abs}/%TOPDIR_RELPROG%/%ZLIB_RUNTIMELIB_RELTOP%"
+g_ldlibdirs="$g_ldlibdirs:${g_progdir_abs}/%TOPDIR_RELPROG%/%GCC_RUNTIMELIB_RELTOP%"
+g_ldlibdirs=${g_ldlibdirs#:}
+
+# ---- main
+
+LD_LIBRARY_PATH="$g_ldlibdirs" \
+    exec "$g_exe" ${1+"$@"}
