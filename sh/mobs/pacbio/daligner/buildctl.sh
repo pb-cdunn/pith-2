@@ -45,7 +45,8 @@ build_cmd() {
 }
 
 install_cmd() {
-    cmd="echo crickets..."
+    mkdir -p "$g_installbuild_dir/bin"
+    cmd="$g_make_exe -C $g_srcdir_abs install PREFIX=$g_installbuild_dir"
     $cmd
 }
 
