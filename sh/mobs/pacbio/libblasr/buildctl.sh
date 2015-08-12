@@ -40,12 +40,13 @@ set_globals() {
 	eval g_installunittest_dir_abs="\$MOBS_${g_name}__installunittest_dir"
 	eval g_installunittest_dir="\$MOBS_${g_name}__installunittest_dir"
 
-    #TODO(CD): Build outside source tree.
+    #TODO(CD): Build outside source tree. WHERE?
+    g_builddir="$g_outdir/build"
+    mkdir -p "$g_builddir"
 	g_git_build_topdir="$g_srcdir_abs"
 	g_git_build_srcdir="$g_git_build_topdir"
     g_git_unittest_srcdir="$g_git_build_srcdir/../unittest"
-    g_git_unittest_outdir="$g_git_unittest_srcdir/_output"
-    g_git_unittest_makefile="$g_git_unittest_srcdir/Makefile"
+    g_unittest_outdir="$g_outdir/unittest"
 
     g_conf_cmd='
 	"$g_git_build_srcdir"/../configure.py
@@ -56,23 +57,10 @@ set_globals() {
 # ---- build targets
 
 clean_unittest() {
-    if [[ -e "$g_git_unittest_makefile" ]] ; then
-	echo "Running $g_name 'clean-unittest' target..."
-	eval "$g_make_exe -C "$g_git_unittest_outdir"" \
-  	         ${1+"$@"} clean
-    fi
+    rm -rf "${g_unittest_outdir}"
 }
 clean_build() {
     echo "Running $g_name 'clean-build' target..."
-    # Clean the build artifacts
-    # NOTE: don't need HDF5_INC/LIB for clean, supply /dev/null to inhibit
-    #       errors
-    #if [[ -e "$g_git_build_srcdir/makefile" ]] ; then
-    #    eval "$g_make_cmd" clean \
-    #    COMMON_NO_THIRD_PARTY_REQD=true \
-    #    ${1+"$@"}
-    #fi
-    # Remove the _output directory
     rm -rf "${g_outdir}"
 }
 clean() {
@@ -98,8 +86,9 @@ build() {
     ln -s "$g_libpbihdf_rootdir_abs" "${g_outdir}/deplinks/libpbihdf"
 
 	shared_flag="SHARED_LIB=true"
-    cd "$g_git_build_srcdir"
 set -x
+    cd "$g_builddir"
+    ln -sf "$g_srcdir_abs"/makefile makefile
     # build
     eval "$g_conf_cmd" \
         CXX="${g_gxx_exe}" \
@@ -130,13 +119,13 @@ unittest() {
     echo "Running $g_name 'unittest' target..."
     
 	shared_flag="SHARED_LIB=true"
-    cd "$g_git_unittest_srcdir"
 set -x
+    cd "$g_unittest_outdir"
+    ln -sf "$g_srcdir_abs"/../unittest/makefile makefile
     eval "$g_conf_cmd" \
         CXX="${g_gxx_exe}" \
         AR="${g_ar_exe}" \
 	"${shared_flag}" \
-	OUTDIR="$g_git_unittest_outdir" \
 	GTEST_SRCDIR="$g_gtest_rootdir_abs/fused-src" \
 	GTEST_INC="$g_gtest_rootdir_abs/fused-src" \
 	BOOST_INC="${g_outdir_abs}/deplinks/boost/include" \
@@ -156,15 +145,17 @@ set -x
 	LIBBLASR_LIB="${g_installbuild_dir}/lib/" \
 	${1+"$@"}
 
-    eval "$g_make_exe" --debug=b gtest
+    eval "$g_make_exe" -C "$g_unittest_outdir" gtest
 set +x
 
-    # clean installunittest dir
-    rm -rf "$g_installunittest_dir";
+    # clean installunittest dir ~hm
+    # why? it seems to be the same as g_unittest_outdir! ~cd
+    #rm -rf "$g_installunittest_dir";
     mkdir -p "$g_installunittest_dir";
 
-    # Copy unittest xml results dir
-    cp -a "$g_git_unittest_outdir/xml"  "$g_installunittest_dir"
+    # Copy unittest xml results dir ~hm
+    # but they are the same file! ~cd
+    #cp -a "$g_unittest_outdir/xml"  "$g_installunittest_dir"
 }
 
 install_build() {
@@ -180,7 +171,7 @@ install_build() {
 
     # install libs
     mkdir "$g_installbuild_dir/lib"
-	cp -a "${g_git_build_srcdir}/${g_name}.so"  "$g_installbuild_dir/lib"
+	cp -a "${g_builddir}/${g_name}.so"  "$g_installbuild_dir/lib"
 
     # install includes
     mkdir -p "$g_installbuild_dir/include"        
