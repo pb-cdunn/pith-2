@@ -2,7 +2,6 @@
 # ---- required subroutines
 set_globals() {
     # required globals:
-set -x
     g_name="blasr"
 
 	mobs_exe=$MOBS_EXE;
@@ -23,6 +22,7 @@ set -x
 	g_hdf5_rootdir_abs=$MOBS_hdf5__install_dir
 	g_zlib_rootdir_abs=$MOBS_zlib__install_dir
 	g_boost_rootdir_abs=$MOBS_boost__root_dir
+    g_gcc_runtime_libdir_abs=$MOBS_gcc__runtimelib_dir
 
 	eval g_src_dir="\$MOBS_${g_name}__src_dir"
 
@@ -202,11 +202,10 @@ set -x
 	PBBAM_LIBFLAGS=\"$pbbam_libflags\" \
 	HTSLIB_LIBFLAGS=\"$htslib_libflags\" \
 	HDF5_LIBFLAGS=\"$hdf5_libflags\" \
+    GCC_LIB=\"$g_gcc_runtime_libdir_abs\" \
 	ZLIB_LIBFLAGS=\"$zlib_libflags\"
 
     eval "$g_make_cmd" \
-        --debug=b \
-        -j4 \
 	${1+"$@"}
 set +x
 }

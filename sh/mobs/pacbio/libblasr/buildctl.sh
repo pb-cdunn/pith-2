@@ -14,10 +14,7 @@ set_globals() {
 	g_make_exe=$MOBS_make__make_exe
 
 	g_gxx_exe=$MOBS_gcc__gxx_exe
-    g_gxx_exe=/mnt/software/c/ccache/3.1.9/bin/g++
 	g_ar_exe=$MOBS_gcc__ar_exe
-
-	g_git_exe=$MOBS_git__git_exe
 
     g_gcc_runtime_libdir_abs=$MOBS_gcc__runtimelib_dir
 	g_boost_rootdir_abs=$MOBS_boost__root_dir
@@ -40,16 +37,13 @@ set_globals() {
 	eval g_installunittest_dir_abs="\$MOBS_${g_name}__installunittest_dir"
 	eval g_installunittest_dir="\$MOBS_${g_name}__installunittest_dir"
 
-    #TODO(CD): Build outside source tree. WHERE?
     g_builddir="$g_outdir/build"
     mkdir -p "$g_builddir"
-	g_git_build_topdir="$g_srcdir_abs"
-	g_git_build_srcdir="$g_git_build_topdir"
-    g_git_unittest_srcdir="$g_git_build_srcdir/../unittest"
     g_unittest_outdir="$g_outdir/unittest"
+    mkdir -p "$g_unittest_outdir"
 
     g_conf_cmd='
-	"$g_git_build_srcdir"/../configure.py
+	"$g_srcdir_abs"/../configure.py
     '
     g_conf_cmd=$(echo $g_conf_cmd)
 }
@@ -109,7 +103,7 @@ set -x
 	LIBPBIHDF_LIB="${g_outdir_abs}/deplinks/libpbihdf/lib/" \
 	${1+"$@"}
 
-    eval "$g_make_exe" \
+    eval "$g_make_exe" -C "$g_builddir" \
         -j4 \
         libblasr.so
 set +x
@@ -179,11 +173,11 @@ install_build() {
     #        we need to export to other programs that depend on libblasr??
     for i in . utils statistics tuples format files suffixarray ipc bwt datastructures/anchoring datastructures/alignment datastructures/alignmentset algorithms/alignment algorithms/compare algorithms/sorting algorithms/alignment/sdp algorithms/anchoring; do
 	mkdir -p "$g_installbuild_dir/include/alignment/$i"
-	cp -a "${g_git_build_srcdir}/$i"/*.hpp "$g_installbuild_dir/include/alignment/$i"
+	cp -a "${g_srcdir_abs}/$i"/*.hpp "$g_installbuild_dir/include/alignment/$i"
     done
     for i in tuples datastructures/alignment; do
 	mkdir -p "$g_installbuild_dir/include/alignment/$i"
-	cp -a "${g_git_build_srcdir}/$i"/*.h "$g_installbuild_dir/include/alignment/$i"
+	cp -a "${g_srcdir_abs}/$i"/*.h "$g_installbuild_dir/include/alignment/$i"
     done
 
 }
