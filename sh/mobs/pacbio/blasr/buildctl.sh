@@ -78,23 +78,17 @@ set_globals() {
 	top_relbinwrap=${top_relbinwrap#/};
 	g_build_topdir_relprog="$top_relbinwrap"
 
-    g_make_cmd='
-	$g_make_exe -C "$g_src_dir"
-    '
-    g_make_cmd=$(echo $g_make_cmd)
+    g_builddir="$g_outdir"/build
+    mkdir -p "$g_builddir"
 
-    g_make_cmd='
-	    $g_make_exe -C "${g_outdir}"/build
-    '
     g_conf_cmd='
-        "$g_python_exe" "$g_src_dir/configure.py" --build-dir="${g_outdir}"/build
+        "$g_python_exe" "$g_src_dir/configure.py" --build-dir="${g_builddir}"
     '
     # Delete the old fetched git.
 	if [ -d "${g_outdir}"/build/blasr ]; then
         rm -rf "${g_outdir}"/build/blasr
     fi
 
-    g_make_cmd=$(echo $g_make_cmd)
     g_conf_cmd=$(echo $g_conf_cmd)
 }
 
@@ -173,6 +167,7 @@ build() {
     zlib_libflags="$shared_libopt -lz"
 
 set -x
+    # This runs in $g_outdir/build.
     eval "$g_conf_cmd" \
         --shared \
 	"$shared_flag" \
@@ -205,7 +200,8 @@ set -x
     GCC_LIB=\"$g_gcc_runtime_libdir_abs\" \
 	ZLIB_LIBFLAGS=\"$zlib_libflags\"
 
-    eval "$g_make_cmd" \
+    eval "$g_make_exe" -C "$g_builddir"\
+        -j4 \
 	${1+"$@"}
 set +x
 }
