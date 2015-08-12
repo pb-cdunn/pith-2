@@ -16,8 +16,7 @@ set_globals() {
 	g_gxx_exe=$MOBS_gcc__gxx_exe
 	g_ar_exe=$MOBS_gcc__ar_exe
 
-	g_git_exe=$MOBS_git__git_exe
-
+    g_gcc_runtime_libdir_abs=$MOBS_gcc__runtimelib_dir
 	g_boost_rootdir_abs=$MOBS_boost__root_dir
 	g_zlib_rootdir_abs=$MOBS_zlib__install_dir
 	g_hdf5_rootdir_abs=$MOBS_hdf5__install_dir
@@ -38,50 +37,24 @@ set_globals() {
 	eval g_installunittest_dir_abs="\$MOBS_${g_name}__installunittest_dir"
 	eval g_installunittest_dir="\$MOBS_${g_name}__installunittest_dir"
 
-    #TODO(CD): Build outside source tree.
-	g_git_build_topdir="$g_srcdir_abs"
-	g_git_build_srcdir="$g_git_build_topdir"
-    g_git_unittest_srcdir="$g_git_build_srcdir/../unittest"
-    g_git_unittest_outdir="$g_git_unittest_srcdir/_output"
-    g_git_unittest_makefile="$g_git_unittest_srcdir/Makefile"
-
-    g_make_cmd='
-        ${g_make_exe} -C "$g_git_build_srcdir"
-    '
-    g_make_cmd=$(echo $g_make_cmd)
+    g_builddir="$g_outdir/build"
+    mkdir -p "$g_builddir"
+    g_unittest_outdir="$g_outdir/unittest"
+    mkdir -p "$g_unittest_outdir"
 
     g_conf_cmd='
-	"$g_git_build_srcdir"/../configure.py
+	"$g_srcdir_abs"/../configure.py
     '
     g_conf_cmd=$(echo $g_conf_cmd)
-
-    g_unittest_make_cmd='
-        ${g_make_exe} -C "$g_git_unittest_srcdir"
-    '
-    g_unittest_make_cmd=$(echo $g_unittest_make_cmd)
 }
 
 # ---- build targets
 
 clean_unittest() {
-    if [[ -e "$g_git_unittest_makefile" ]] ; then
-	echo "Running $g_name 'clean-unittest' target..."
-	eval "$g_unittest_make_cmd" \
-	    OUTDIR="$g_git_unittest_outdir" \
-  	         ${1+"$@"} clean
-    fi
+    rm -rf "${g_unittest_outdir}"
 }
 clean_build() {
     echo "Running $g_name 'clean-build' target..."
-    # Clean the build artifacts
-    # NOTE: don't need HDF5_INC/LIB for clean, supply /dev/null to inhibit
-    #       errors
-    #if [[ -e "$g_git_build_srcdir/makefile" ]] ; then
-    #    eval "$g_make_cmd" clean \
-    #    COMMON_NO_THIRD_PARTY_REQD=true \
-    #    ${1+"$@"}
-    #fi
-    # Remove the _output directory
     rm -rf "${g_outdir}"
 }
 clean() {
@@ -108,26 +81,29 @@ build() {
 
 	shared_flag="SHARED_LIB=true"
 set -x
+    cd "$g_builddir"
+    ln -sf "$g_srcdir_abs"/makefile makefile
     # build
     eval "$g_conf_cmd" \
         CXX="${g_gxx_exe}" \
         AR="${g_ar_exe}" \
 	"${shared_flag}" \
-	BOOST_INCLUDE="${g_outdir_abs}/deplinks/boost/include" \
-	HTSLIB_INCLUDE="${g_outdir_abs}/deplinks/htslib/include" \
-	PBBAM_INCLUDE="${g_outdir_abs}/deplinks/pbbam/include" \
-	LIBPBDATA_INCLUDE="${g_outdir_abs}/deplinks/libpbdata/include" \
-	LIBPBIHDF_INCLUDE="${g_outdir_abs}/deplinks/libpbihdf/include/hdf" \
-	HDF5_INCLUDE="${g_outdir_abs}/deplinks/hdf5/include" \
-	HDF5_LIB="${g_outdir_abs}/deplinks/hdf5/lib/libhdf5.so" \
-	ZLIB_LIB="${g_outdir_abs}/deplinks/zlib/lib/libz.so" \
-	HTSLIB_LIB="${g_outdir_abs}/deplinks/htslib/lib/libhts.so" \
-	PBBAM_LIB="${g_outdir_abs}/deplinks/pbbam/lib/libpbbam.so" \
-	LIBPBDATA_LIB="${g_outdir_abs}/deplinks/libpbdata/lib/libpbdata.so" \
-	LIBPBIHDF_LIB="${g_outdir_abs}/deplinks/libpbihdf/lib/libpbihdf.so" \
+    GCC_LIB=\"$g_gcc_runtime_libdir_abs\" \
+	BOOST_INC="${g_outdir_abs}/deplinks/boost/include" \
+	HTSLIB_INC="${g_outdir_abs}/deplinks/htslib/include" \
+	PBBAM_INC="${g_outdir_abs}/deplinks/pbbam/include" \
+	LIBPBDATA_INC="${g_outdir_abs}/deplinks/libpbdata/include" \
+	LIBPBIHDF_INC="${g_outdir_abs}/deplinks/libpbihdf/include/hdf" \
+	HDF5_INC="${g_outdir_abs}/deplinks/hdf5/include" \
+	HDF5_LIB="${g_outdir_abs}/deplinks/hdf5/lib/" \
+	ZLIB_LIB="${g_outdir_abs}/deplinks/zlib/lib/" \
+	HTSLIB_LIB="${g_outdir_abs}/deplinks/htslib/lib/" \
+	PBBAM_LIB="${g_outdir_abs}/deplinks/pbbam/lib/" \
+	LIBPBDATA_LIB="${g_outdir_abs}/deplinks/libpbdata/lib/" \
+	LIBPBIHDF_LIB="${g_outdir_abs}/deplinks/libpbihdf/lib/" \
 	${1+"$@"}
 
-    eval "$g_make_cmd" \
+    eval "$g_make_exe" -C "$g_builddir" \
         -j4 \
         libblasr.so
 set +x
@@ -136,37 +112,46 @@ set +x
 unittest() {
     echo "Running $g_name 'unittest' target..."
     
+	shared_flag="SHARED_LIB=true"
 set -x
-    eval "$g_unittest_make_cmd" \
+    cd "$g_unittest_outdir"
+    ln -sf "$g_srcdir_abs"/../unittest/makefile makefile
+    eval "$g_conf_cmd" \
         CXX="${g_gxx_exe}" \
-	OUTDIR="$g_git_unittest_outdir" \
+        AR="${g_ar_exe}" \
+	"${shared_flag}" \
 	GTEST_SRCDIR="$g_gtest_rootdir_abs/fused-src" \
-	LIBBLASR_INCLUDE="${g_installbuild_dir}/include/alignment" \
-	LIBPBIHDF_INCLUDE="${g_outdir_abs}/deplinks/libpbihdf/include/hdf" \
-	LIBPBDATA_INCLUDE="${g_outdir_abs}/deplinks/libpbdata/include" \
-	PBBAM_INCLUDE="${g_outdir_abs}/deplinks/pbbam/include" \
-	HTSLIB_INCLUDE="${g_outdir_abs}/deplinks/htslib/include" \
-	HDF5_INCLUDE="${g_outdir_abs}/deplinks/hdf5/include" \
-	BOOST_INCLUDE="${g_outdir_abs}/deplinks/boost/include" \
-	GTEST_INCLUDE="$g_gtest_rootdir_abs/fused-src" \
-	LIBBLASR_LIB="${g_installbuild_dir}/lib/libblasr.so" \
-	LIBPBIHDF_LIB="${g_outdir_abs}/deplinks/libpbihdf/lib/libpbihdf.so" \
-	LIBPBDATA_LIB="${g_outdir_abs}/deplinks/libpbdata/lib/libpbdata.so" \
-	PBBAM_LIB="${g_outdir_abs}/deplinks/pbbam/lib/libpbbam.so" \
-	HTSLIB_LIB="${g_outdir_abs}/deplinks/htslib/lib/libhts.so" \
-	HDF5_LIB="${g_outdir_abs}/deplinks/hdf5/lib/libhdf5.so" \
-	HDF5_CPP_LIB="${g_outdir_abs}/deplinks/hdf5/lib/libhdf5_cpp.so" \
-	ZLIB_LIB="${g_outdir_abs}/deplinks/zlib/lib/libz.so" \
-	V=1 \
-	${1+"$@"} gtest
+	GTEST_INC="$g_gtest_rootdir_abs/fused-src" \
+	BOOST_INC="${g_outdir_abs}/deplinks/boost/include" \
+	HTSLIB_INC="${g_outdir_abs}/deplinks/htslib/include" \
+	PBBAM_INC="${g_outdir_abs}/deplinks/pbbam/include" \
+	LIBPBDATA_INC="${g_outdir_abs}/deplinks/libpbdata/include" \
+	LIBPBIHDF_INC="${g_outdir_abs}/deplinks/libpbihdf/include/hdf" \
+	LIBBLASR_INC="${g_installbuild_dir}/include/alignment" \
+	HDF5_INC="${g_outdir_abs}/deplinks/hdf5/include" \
+    GCC_LIB=\"$g_gcc_runtime_libdir_abs\" \
+	HDF5_LIB="${g_outdir_abs}/deplinks/hdf5/lib/" \
+	ZLIB_LIB="${g_outdir_abs}/deplinks/zlib/lib/" \
+	HTSLIB_LIB="${g_outdir_abs}/deplinks/htslib/lib/" \
+	PBBAM_LIB="${g_outdir_abs}/deplinks/pbbam/lib/" \
+	LIBPBDATA_LIB="${g_outdir_abs}/deplinks/libpbdata/lib/" \
+	LIBPBIHDF_LIB="${g_outdir_abs}/deplinks/libpbihdf/lib/" \
+	LIBBLASR_LIB="${g_installbuild_dir}/lib/" \
+	${1+"$@"}
+
+    eval "$g_make_exe" -C "$g_unittest_outdir" \
+        -j4 \
+        gtest
 set +x
 
-    # clean installunittest dir
-    rm -rf "$g_installunittest_dir";
+    # clean installunittest dir ~hm
+    # why? it seems to be the same as g_unittest_outdir! ~cd
+    #rm -rf "$g_installunittest_dir";
     mkdir -p "$g_installunittest_dir";
 
-    # Copy unittest xml results dir
-    cp -a "$g_git_unittest_outdir/xml"  "$g_installunittest_dir"
+    # Copy unittest xml results dir ~hm
+    # but they are the same file! ~cd
+    #cp -a "$g_unittest_outdir/xml"  "$g_installunittest_dir"
 }
 
 install_build() {
@@ -182,19 +167,19 @@ install_build() {
 
     # install libs
     mkdir "$g_installbuild_dir/lib"
-	cp -a "${g_git_build_srcdir}/${g_name}.so"  "$g_installbuild_dir/lib"
+	cp -a "${g_builddir}/${g_name}.so"  "$g_installbuild_dir/lib"
 
     # install includes
     mkdir -p "$g_installbuild_dir/include"        
     # FIXME: Is there a better way to specify all the include headers that
     #        we need to export to other programs that depend on libblasr??
-    for i in . utils statistics tuples format files suffixarray ipc bwt datastructures/anchoring datastructures/alignment datastructures/alignmentset algorithms/alignment algorithms/compare algorithms/sorting algorithms/alignment/sdp algorithms/anchoring; do
+    for i in . utils statistics tuples format files suffixarray ipc bwt datastructures/anchoring datastructures/alignment datastructures/alignmentset algorithms/alignment algorithms/compare algorithms/sorting algorithms/alignment/sdp algorithms/anchoring simulator; do
 	mkdir -p "$g_installbuild_dir/include/alignment/$i"
-	cp -a "${g_git_build_srcdir}/$i"/*.hpp "$g_installbuild_dir/include/alignment/$i"
+	cp -a "${g_srcdir_abs}/$i"/*.hpp "$g_installbuild_dir/include/alignment/$i"
     done
     for i in tuples datastructures/alignment; do
 	mkdir -p "$g_installbuild_dir/include/alignment/$i"
-	cp -a "${g_git_build_srcdir}/$i"/*.h "$g_installbuild_dir/include/alignment/$i"
+	cp -a "${g_srcdir_abs}/$i"/*.h "$g_installbuild_dir/include/alignment/$i"
     done
 
 }

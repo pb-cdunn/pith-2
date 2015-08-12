@@ -16,8 +16,7 @@ set_globals() {
 	g_gxx_exe=$MOBS_gcc__gxx_exe
 	g_ar_exe=$MOBS_gcc__ar_exe
 
-	g_git_exe=$MOBS_git__git_exe
-
+    g_gcc_runtime_libdir_abs=$MOBS_gcc__runtimelib_dir
 	g_boost_rootdir_abs=$MOBS_boost__root_dir
 	g_htslib_rootdir_abs=$MOBS_htslib__install_dir
 	g_pbbam_rootdir_abs=$MOBS_pbbam__install_dir
@@ -30,16 +29,11 @@ set_globals() {
 	eval g_installbuild_dir="\$MOBS_${g_name}__install_dir"
 
 
-	g_git_build_topdir="$g_srcdir_abs"
-	g_git_build_srcdir="$g_git_build_topdir"
-
-    g_make_cmd='
-	$g_make_exe -C "$g_git_build_srcdir"
-    '
-    g_make_cmd=$(echo $g_make_cmd)
+    g_builddir="$g_outdir/build"
+    mkdir -p "$g_builddir"
 
     g_conf_cmd='
-	"$g_git_build_srcdir"/../configure.py
+	"$g_srcdir_abs"/../configure.py
     '
     g_conf_cmd=$(echo $g_conf_cmd)
 }
@@ -48,11 +42,6 @@ set_globals() {
 
 clean() {
     echo "Running $g_name 'clean' target..."
-    # Clean the build artifacts
-    #if [[ -e "$g_git_build_srcdir/Makefile" ]] ; then
-	#eval "$g_make_cmd" clean ${1+"$@"}
-    #fi
-    # Remove the _output directory
     rm -rf "${g_outdir}"
 }
 cleanall() {
@@ -73,18 +62,21 @@ build() {
 	shared_flag="SHARED_LIB=true"
 
 set -x
+    cd "$g_builddir"
+    ln -sf "$g_srcdir_abs"/makefile makefile
     eval "$g_conf_cmd" \
         CXX="${g_gxx_exe}" \
         AR="${g_ar_exe}" \
 	"${shared_flag}" \
-	BOOST_INCLUDE="${g_outdir_abs}/deplinks/boost/include" \
-	HTSLIB_INCLUDE="${g_outdir_abs}/deplinks/htslib/include" \
-	PBBAM_INCLUDE="${g_outdir_abs}/deplinks/pbbam/include" \
+	BOOST_INC="${g_outdir_abs}/deplinks/boost/include" \
+	HTSLIB_INC="${g_outdir_abs}/deplinks/htslib/include" \
+	PBBAM_INC="${g_outdir_abs}/deplinks/pbbam/include" \
+    GCC_LIB=\"$g_gcc_runtime_libdir_abs\" \
 	HTSLIB_LIB="${g_outdir_abs}/deplinks/htslib/lib/libhts.so" \
 	PBBAM_LIB="${g_outdir_abs}/deplinks/pbbam/lib/libpbbam.so" \
 	${1+"$@"}
 
-    eval "$g_make_cmd" \
+    eval "$g_make_exe" -C "$g_builddir"\
         -j4 \
 	    libpbdata.so
 set +x
@@ -102,17 +94,17 @@ install_build() {
 
     # install libs
     mkdir "$g_installbuild_dir/lib"
-	cp -a "${g_git_build_srcdir}/${g_name}.so"  "$g_installbuild_dir/lib"
+	cp -a "${g_builddir}/${g_name}.so"  "$g_installbuild_dir/lib"
 
     # install includes
     mkdir -p "$g_installbuild_dir/include"        
     for i in . alignment amos loadpulses matrix metagenome qvs reads saf sam utils; do
 	mkdir -p "$g_installbuild_dir/include/$i"
-	cp -a "${g_git_build_srcdir}/$i"/*.hpp "$g_installbuild_dir/include/$i"
+	cp -a "${g_srcdir_abs}/$i"/*.hpp "$g_installbuild_dir/include/$i"
     done
     for i in . sam; do
 	mkdir -p "$g_installbuild_dir/include/$i"
-	cp -a "${g_git_build_srcdir}/$i"/*.h "$g_installbuild_dir/include/$i"
+	cp -a "${g_srcdir_abs}/$i"/*.h "$g_installbuild_dir/include/$i"
     done
 
 }

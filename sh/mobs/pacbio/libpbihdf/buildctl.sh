@@ -16,8 +16,7 @@ set_globals() {
 	g_gxx_exe=$MOBS_gcc__gxx_exe
 	g_ar_exe=$MOBS_gcc__ar_exe
 
-	g_git_exe=$MOBS_git__git_exe
-
+    g_gcc_runtime_libdir_abs=$MOBS_gcc__runtimelib_dir
 	g_boost_rootdir_abs=$MOBS_boost__root_dir
 	g_zlib_rootdir_abs=$MOBS_zlib__install_dir
 	g_hdf5_rootdir_abs=$MOBS_hdf5__install_dir
@@ -32,15 +31,11 @@ set_globals() {
 	eval g_installbuild_dir_abs="\$MOBS_${g_name}__install_dir"
 	eval g_installbuild_dir="\$MOBS_${g_name}__install_dir"
 
-	g_git_build_topdir="$g_srcdir_abs"
-	g_git_build_srcdir="$g_git_build_topdir"
-    g_make_cmd='
-        ${g_make_exe} -C "$g_git_build_srcdir"
-    '
-    g_make_cmd=$(echo $g_make_cmd)
+    g_builddir="$g_outdir/build"
+    mkdir -p "$g_builddir"
 
     g_conf_cmd='
-	"$g_git_build_srcdir"/../configure.py
+	"$g_srcdir_abs"/../configure.py
     '
     g_conf_cmd=$(echo $g_conf_cmd)
 }
@@ -50,16 +45,6 @@ set_globals() {
 
 clean() {
     echo "Running $g_name 'clean' target..."
-    # Clean the build artifacts
-    # NOTE: don't need HDF5_INC/LIB for clean, supply /dev/null to inhibit
-    #       errors
-    #if [[ -e "$g_git_build_srcdir/Makefile" ]] ; then
-	#eval "$g_make_cmd" clean \
-	#    COMMON_NO_THIRD_PARTY_REQD=true \
-	#    ${1+"$@"}
-    #fi
-
-    # Remove the _output directory
     rm -rf "${g_outdir}"
 }
 cleanall() {
@@ -83,15 +68,18 @@ build() {
 	shared_flag="SHARED_LIB=true"
 set -x
     # build
+    cd "$g_builddir"
+    ln -sf "$g_srcdir_abs"/makefile makefile
     eval "$g_conf_cmd" \
         CXX="${g_gxx_exe}" \
         AR="${g_ar_exe}" \
 	"${shared_flag}" \
-	BOOST_INCLUDE="${g_outdir}/deplinks/boost/include" \
-	HTSLIB_INCLUDE="${g_outdir}/deplinks/htslib/include" \
-	PBBAM_INCLUDE="${g_outdir}/deplinks/pbbam/include" \
-	LIBPBDATA_INCLUDE="${g_outdir}/deplinks/libpbdata/include" \
-	HDF5_INCLUDE="${g_outdir}/deplinks/hdf5/include" \
+	BOOST_INC="${g_outdir}/deplinks/boost/include" \
+	HTSLIB_INC="${g_outdir}/deplinks/htslib/include" \
+	PBBAM_INC="${g_outdir}/deplinks/pbbam/include" \
+	LIBPBDATA_INC="${g_outdir}/deplinks/libpbdata/include" \
+	HDF5_INC="${g_outdir}/deplinks/hdf5/include" \
+    GCC_LIB=\"$g_gcc_runtime_libdir_abs\" \
 	HDF5_LIB="${g_outdir}/deplinks/hdf5/lib/libhdf5.so" \
 	ZLIB_LIB="${g_outdir}/deplinks/zlib/lib/libz.so" \
 	HTSLIB_LIB="${g_outdir}/deplinks/htslib/lib/libhts.so" \
@@ -99,7 +87,7 @@ set -x
 	LIBPBDATA_LIB="${g_outdir}/deplinks/libpbdata/lib/libpbdata.so" \
 	${1+"$@"}
 
-    eval "$g_make_cmd" \
+    eval "$g_make_exe" -C "$g_builddir" \
         -j4 \
         libpbihdf.so	
 set +x
@@ -117,13 +105,13 @@ install_build() {
 
     # install libs
     mkdir "$g_installbuild_dir/lib"
-	cp -a "${g_git_build_srcdir}/${g_name}.so"  "$g_installbuild_dir/lib"
+	cp -a "${g_builddir}/${g_name}.so"  "$g_installbuild_dir/lib"
 
     # install includes
     mkdir -p "$g_installbuild_dir/include"
     for i in . ; do
 	mkdir -p "$g_installbuild_dir/include/hdf/$i"
-	cp -a "${g_git_build_srcdir}/$i"/*.hpp "$g_installbuild_dir/include/hdf/$i"
+	cp -a "${g_srcdir_abs}/$i"/*.hpp "$g_installbuild_dir/include/hdf/$i"
     done
 
 }
