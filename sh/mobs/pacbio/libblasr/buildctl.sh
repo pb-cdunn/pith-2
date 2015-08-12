@@ -18,6 +18,7 @@ set_globals() {
 
 	g_git_exe=$MOBS_git__git_exe
 
+    g_gcc_runtime_libdir_abs=$MOBS_gcc__runtimelib_dir
 	g_boost_rootdir_abs=$MOBS_boost__root_dir
 	g_zlib_rootdir_abs=$MOBS_zlib__install_dir
 	g_hdf5_rootdir_abs=$MOBS_hdf5__install_dir
@@ -157,9 +158,12 @@ set -x
 	HDF5_LIB="${g_outdir_abs}/deplinks/hdf5/lib/libhdf5.so" \
 	HDF5_CPP_LIB="${g_outdir_abs}/deplinks/hdf5/lib/libhdf5_cpp.so" \
 	ZLIB_LIB="${g_outdir_abs}/deplinks/zlib/lib/libz.so" \
+    GCC_LIB=\"$g_gcc_runtime_libdir_abs\" \
 	V=1 \
 	${1+"$@"} gtest
 set +x
+    # Note: GCC_LIB is *already* just a directory. We will fix the others later, to be
+    # consistent with blasr.
 
     # clean installunittest dir
     rm -rf "$g_installunittest_dir";
