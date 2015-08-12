@@ -139,7 +139,9 @@ set -x
 	LIBBLASR_LIB="${g_installbuild_dir}/lib/" \
 	${1+"$@"}
 
-    eval "$g_make_exe" -C "$g_unittest_outdir" gtest
+    eval "$g_make_exe" -C "$g_unittest_outdir" \
+        -j4 \
+        gtest
 set +x
 
     # clean installunittest dir ~hm
@@ -171,7 +173,7 @@ install_build() {
     mkdir -p "$g_installbuild_dir/include"        
     # FIXME: Is there a better way to specify all the include headers that
     #        we need to export to other programs that depend on libblasr??
-    for i in . utils statistics tuples format files suffixarray ipc bwt datastructures/anchoring datastructures/alignment datastructures/alignmentset algorithms/alignment algorithms/compare algorithms/sorting algorithms/alignment/sdp algorithms/anchoring; do
+    for i in . utils statistics tuples format files suffixarray ipc bwt datastructures/anchoring datastructures/alignment datastructures/alignmentset algorithms/alignment algorithms/compare algorithms/sorting algorithms/alignment/sdp algorithms/anchoring simulator; do
 	mkdir -p "$g_installbuild_dir/include/alignment/$i"
 	cp -a "${g_srcdir_abs}/$i"/*.hpp "$g_installbuild_dir/include/alignment/$i"
     done
