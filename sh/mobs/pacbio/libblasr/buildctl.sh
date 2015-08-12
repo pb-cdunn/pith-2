@@ -14,6 +14,7 @@ set_globals() {
 	g_make_exe=$MOBS_make__make_exe
 
 	g_gxx_exe=$MOBS_gcc__gxx_exe
+    g_gxx_exe=/mnt/software/c/ccache/3.1.9/bin/g++
 	g_ar_exe=$MOBS_gcc__ar_exe
 
 	g_git_exe=$MOBS_git__git_exe
@@ -46,20 +47,10 @@ set_globals() {
     g_git_unittest_outdir="$g_git_unittest_srcdir/_output"
     g_git_unittest_makefile="$g_git_unittest_srcdir/Makefile"
 
-    g_make_cmd='
-        ${g_make_exe} -C "$g_git_build_srcdir"
-    '
-    g_make_cmd=$(echo $g_make_cmd)
-
     g_conf_cmd='
 	"$g_git_build_srcdir"/../configure.py
     '
     g_conf_cmd=$(echo $g_conf_cmd)
-
-    g_unittest_make_cmd='
-        ${g_make_exe} -C "$g_git_unittest_srcdir"
-    '
-    g_unittest_make_cmd=$(echo $g_unittest_make_cmd)
 }
 
 # ---- build targets
@@ -67,8 +58,7 @@ set_globals() {
 clean_unittest() {
     if [[ -e "$g_git_unittest_makefile" ]] ; then
 	echo "Running $g_name 'clean-unittest' target..."
-	eval "$g_unittest_make_cmd" \
-	    OUTDIR="$g_git_unittest_outdir" \
+	eval "$g_make_exe -C "$g_git_unittest_outdir"" \
   	         ${1+"$@"} clean
     fi
 }
@@ -108,27 +98,29 @@ build() {
     ln -s "$g_libpbihdf_rootdir_abs" "${g_outdir}/deplinks/libpbihdf"
 
 	shared_flag="SHARED_LIB=true"
+    cd "$g_git_build_srcdir"
 set -x
     # build
     eval "$g_conf_cmd" \
         CXX="${g_gxx_exe}" \
         AR="${g_ar_exe}" \
 	"${shared_flag}" \
-	BOOST_INCLUDE="${g_outdir_abs}/deplinks/boost/include" \
-	HTSLIB_INCLUDE="${g_outdir_abs}/deplinks/htslib/include" \
-	PBBAM_INCLUDE="${g_outdir_abs}/deplinks/pbbam/include" \
-	LIBPBDATA_INCLUDE="${g_outdir_abs}/deplinks/libpbdata/include" \
-	LIBPBIHDF_INCLUDE="${g_outdir_abs}/deplinks/libpbihdf/include/hdf" \
-	HDF5_INCLUDE="${g_outdir_abs}/deplinks/hdf5/include" \
-	HDF5_LIB="${g_outdir_abs}/deplinks/hdf5/lib/libhdf5.so" \
-	ZLIB_LIB="${g_outdir_abs}/deplinks/zlib/lib/libz.so" \
-	HTSLIB_LIB="${g_outdir_abs}/deplinks/htslib/lib/libhts.so" \
-	PBBAM_LIB="${g_outdir_abs}/deplinks/pbbam/lib/libpbbam.so" \
-	LIBPBDATA_LIB="${g_outdir_abs}/deplinks/libpbdata/lib/libpbdata.so" \
-	LIBPBIHDF_LIB="${g_outdir_abs}/deplinks/libpbihdf/lib/libpbihdf.so" \
+    GCC_LIB=\"$g_gcc_runtime_libdir_abs\" \
+	BOOST_INC="${g_outdir_abs}/deplinks/boost/include" \
+	HTSLIB_INC="${g_outdir_abs}/deplinks/htslib/include" \
+	PBBAM_INC="${g_outdir_abs}/deplinks/pbbam/include" \
+	LIBPBDATA_INC="${g_outdir_abs}/deplinks/libpbdata/include" \
+	LIBPBIHDF_INC="${g_outdir_abs}/deplinks/libpbihdf/include/hdf" \
+	HDF5_INC="${g_outdir_abs}/deplinks/hdf5/include" \
+	HDF5_LIB="${g_outdir_abs}/deplinks/hdf5/lib/" \
+	ZLIB_LIB="${g_outdir_abs}/deplinks/zlib/lib/" \
+	HTSLIB_LIB="${g_outdir_abs}/deplinks/htslib/lib/" \
+	PBBAM_LIB="${g_outdir_abs}/deplinks/pbbam/lib/" \
+	LIBPBDATA_LIB="${g_outdir_abs}/deplinks/libpbdata/lib/" \
+	LIBPBIHDF_LIB="${g_outdir_abs}/deplinks/libpbihdf/lib/" \
 	${1+"$@"}
 
-    eval "$g_make_cmd" \
+    eval "$g_make_exe" \
         -j4 \
         libblasr.so
 set +x
@@ -137,33 +129,35 @@ set +x
 unittest() {
     echo "Running $g_name 'unittest' target..."
     
+	shared_flag="SHARED_LIB=true"
+    cd "$g_git_unittest_srcdir"
 set -x
-    eval "$g_unittest_make_cmd" \
+    eval "$g_conf_cmd" \
         CXX="${g_gxx_exe}" \
+        AR="${g_ar_exe}" \
+	"${shared_flag}" \
 	OUTDIR="$g_git_unittest_outdir" \
 	GTEST_SRCDIR="$g_gtest_rootdir_abs/fused-src" \
-	LIBBLASR_INCLUDE="${g_installbuild_dir}/include/alignment" \
-	LIBPBIHDF_INCLUDE="${g_outdir_abs}/deplinks/libpbihdf/include/hdf" \
-	LIBPBDATA_INCLUDE="${g_outdir_abs}/deplinks/libpbdata/include" \
-	PBBAM_INCLUDE="${g_outdir_abs}/deplinks/pbbam/include" \
-	HTSLIB_INCLUDE="${g_outdir_abs}/deplinks/htslib/include" \
-	HDF5_INCLUDE="${g_outdir_abs}/deplinks/hdf5/include" \
-	BOOST_INCLUDE="${g_outdir_abs}/deplinks/boost/include" \
-	GTEST_INCLUDE="$g_gtest_rootdir_abs/fused-src" \
-	LIBBLASR_LIB="${g_installbuild_dir}/lib/libblasr.so" \
-	LIBPBIHDF_LIB="${g_outdir_abs}/deplinks/libpbihdf/lib/libpbihdf.so" \
-	LIBPBDATA_LIB="${g_outdir_abs}/deplinks/libpbdata/lib/libpbdata.so" \
-	PBBAM_LIB="${g_outdir_abs}/deplinks/pbbam/lib/libpbbam.so" \
-	HTSLIB_LIB="${g_outdir_abs}/deplinks/htslib/lib/libhts.so" \
-	HDF5_LIB="${g_outdir_abs}/deplinks/hdf5/lib/libhdf5.so" \
-	HDF5_CPP_LIB="${g_outdir_abs}/deplinks/hdf5/lib/libhdf5_cpp.so" \
-	ZLIB_LIB="${g_outdir_abs}/deplinks/zlib/lib/libz.so" \
+	GTEST_INC="$g_gtest_rootdir_abs/fused-src" \
+	BOOST_INC="${g_outdir_abs}/deplinks/boost/include" \
+	HTSLIB_INC="${g_outdir_abs}/deplinks/htslib/include" \
+	PBBAM_INC="${g_outdir_abs}/deplinks/pbbam/include" \
+	LIBPBDATA_INC="${g_outdir_abs}/deplinks/libpbdata/include" \
+	LIBPBIHDF_INC="${g_outdir_abs}/deplinks/libpbihdf/include/hdf" \
+	LIBBLASR_INC="${g_installbuild_dir}/include/alignment" \
+	HDF5_INC="${g_outdir_abs}/deplinks/hdf5/include" \
     GCC_LIB=\"$g_gcc_runtime_libdir_abs\" \
-	V=1 \
-	${1+"$@"} gtest
+	HDF5_LIB="${g_outdir_abs}/deplinks/hdf5/lib/" \
+	ZLIB_LIB="${g_outdir_abs}/deplinks/zlib/lib/" \
+	HTSLIB_LIB="${g_outdir_abs}/deplinks/htslib/lib/" \
+	PBBAM_LIB="${g_outdir_abs}/deplinks/pbbam/lib/" \
+	LIBPBDATA_LIB="${g_outdir_abs}/deplinks/libpbdata/lib/" \
+	LIBPBIHDF_LIB="${g_outdir_abs}/deplinks/libpbihdf/lib/" \
+	LIBBLASR_LIB="${g_installbuild_dir}/lib/" \
+	${1+"$@"}
+
+    eval "$g_make_exe" --debug=b gtest
 set +x
-    # Note: GCC_LIB is *already* just a directory. We will fix the others later, to be
-    # consistent with blasr.
 
     # clean installunittest dir
     rm -rf "$g_installunittest_dir";
