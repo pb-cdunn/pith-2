@@ -181,7 +181,6 @@ install_build() {
 	mkdir -p "$g_installbuild_dir/include/alignment/$i"
 	cp -a "${g_srcdir_abs}/$i"/*.h "$g_installbuild_dir/include/alignment/$i"
     done
-
 }
 install_prod() {
     echo "Running $g_name 'install-prod' target..."

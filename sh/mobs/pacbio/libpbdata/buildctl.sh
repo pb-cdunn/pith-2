@@ -107,6 +107,8 @@ install_build() {
 	cp -a "${g_srcdir_abs}/$i"/*.h "$g_installbuild_dir/include/$i"
     done
 
+    # Also copy our generated header.
+        cp -a libconfig.h "$g_installbuild_dir/include/libconfig.h"
 }
 install_prod() {
     echo "Running $g_name 'install-prod' target..."
