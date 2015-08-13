@@ -37,10 +37,11 @@ set_globals() {
 
 clean_cmd() {
     cmd="$g_make_exe -C $g_srcdir_abs clean"
+    $cmd
 }
 
 build_cmd() {
-    cmd="$g_make_exe -C $g_srcdir_abs -j4"
+    cmd="$g_make_exe -C $g_srcdir_abs -j4 CC=$g_gcc_exe"
     $cmd
 }
 
