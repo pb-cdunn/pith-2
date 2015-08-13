@@ -19,6 +19,7 @@ set_globals() {
         g_make_exe=$MOBS_make__make_exe
         g_gcc_exe=$MOBS_gcc__gcc_exe
         g_gxx_exe=$MOBS_gcc__gxx_exe
+        g_ar_exe=$MOBS_gcc__ar_exe
         #g_python_exe=$MOBS_python__python_exe
 
         eval g_srcdir_abs="\$MOBS_${g_name}__src_dir"
@@ -41,7 +42,7 @@ clean_cmd() {
 }
 
 build_cmd() {
-    cmd="$g_make_exe -C $g_srcdir_abs -j4 CC=$g_gcc_exe"
+    cmd="$g_make_exe -C $g_srcdir_abs -j4 CC=$g_gcc_exe AR=$g_ar_exe"
     $cmd
 }
 
