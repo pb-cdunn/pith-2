@@ -221,6 +221,7 @@ install_build() {
     build_dir="${g_outdir}"/build
     cp -a "${build_dir}/${g_name}"  "$g_installbuild_dir/bin"
     cp -a "${build_dir}/utils/sawriter"  "$g_installbuild_dir/bin"
+    cp -a "${build_dir}/utils/pls2fasta"  "$g_installbuild_dir/bin"
 
 
     # Create the binwrap dir
@@ -235,6 +236,7 @@ install_build() {
 	prognames=""
 	prognames="$prognames blasr"
 	prognames="$prognames sawriter"
+	prognames="$prognames pls2fasta"
 	for i in $prognames; do
 	    # build binwrap:
 	    sed \
