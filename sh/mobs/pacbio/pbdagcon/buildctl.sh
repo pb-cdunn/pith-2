@@ -1,4 +1,5 @@
 #!/bin/bash
+# vim: set ts=4 sts=4 sw=4 noet :
 
 # ---- required subroutines
 set_globals() {
@@ -25,6 +26,7 @@ set -x
 	g_hdf5_rootdir_abs=$MOBS_hdf5__install_dir
 	g_zlib_rootdir_abs=$MOBS_zlib__install_dir
 	g_boost_rootdir_abs=$MOBS_boost__root_dir
+        g_gcc_runtime_libdir_abs=$MOBS_gcc__runtimelib_dir
 
 	# For unittest:
 	g_gtest_rootdir_abs=$MOBS_gtest__root_dir
@@ -204,6 +206,7 @@ set -x
 	HTSLIB_LIB=\"$htslib_libdir\" \
 	HDF5_LIB=\"$hdf5_libdir\" \
 	ZLIB_LIB=\"$zlib_libdir\" \
+        GCC_LIB=\"$g_gcc_runtime_libdir_abs\" \
 	\
 	LIBBLASR_LIBFLAGS=\"$libblasr_libflags\" \
 	LIBPBIHDF_LIBFLAGS=\"$libpbihdf_libflags\" \
