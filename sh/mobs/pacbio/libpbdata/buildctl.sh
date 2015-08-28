@@ -72,8 +72,8 @@ set -x
 	HTSLIB_INC="${g_outdir_abs}/deplinks/htslib/include" \
 	PBBAM_INC="${g_outdir_abs}/deplinks/pbbam/include" \
     GCC_LIB=\"$g_gcc_runtime_libdir_abs\" \
-	HTSLIB_LIB="${g_outdir_abs}/deplinks/htslib/lib/libhts.so" \
-	PBBAM_LIB="${g_outdir_abs}/deplinks/pbbam/lib/libpbbam.so" \
+	HTSLIB_LIB="${g_outdir_abs}/deplinks/htslib/lib" \
+	PBBAM_LIB="${g_outdir_abs}/deplinks/pbbam/lib" \
 	${1+"$@"}
 
     eval "$g_make_exe" -C "$g_builddir"\

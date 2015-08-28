@@ -80,11 +80,11 @@ set -x
 	LIBPBDATA_INC="${g_outdir}/deplinks/libpbdata/include" \
 	HDF5_INC="${g_outdir}/deplinks/hdf5/include" \
     GCC_LIB=\"$g_gcc_runtime_libdir_abs\" \
-	HDF5_LIB="${g_outdir}/deplinks/hdf5/lib/libhdf5.so" \
-	ZLIB_LIB="${g_outdir}/deplinks/zlib/lib/libz.so" \
-	HTSLIB_LIB="${g_outdir}/deplinks/htslib/lib/libhts.so" \
-	PBBAM_LIB="${g_outdir}/deplinks/pbbam/lib/libpbbam.so" \
-	LIBPBDATA_LIB="${g_outdir}/deplinks/libpbdata/lib/libpbdata.so" \
+	HDF5_LIB="${g_outdir}/deplinks/hdf5/lib" \
+	ZLIB_LIB="${g_outdir}/deplinks/zlib/lib" \
+	HTSLIB_LIB="${g_outdir}/deplinks/htslib/lib" \
+	PBBAM_LIB="${g_outdir}/deplinks/pbbam/lib" \
+	LIBPBDATA_LIB="${g_outdir}/deplinks/libpbdata/lib" \
 	${1+"$@"}
 
     eval "$g_make_exe" -C "$g_builddir" \
