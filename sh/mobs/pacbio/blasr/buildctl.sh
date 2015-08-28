@@ -175,13 +175,13 @@ set -x
 	CC=\"$g_gcc_exe\" \
 	CXX=\"$g_gxx_exe\" \
 	\
-	LIBBLASR_INCLUDE=\"$libblasr_include\" \
-	LIBPBIHDF_INCLUDE=\"$libpbihdf_include\" \
-        LIBPBDATA_INCLUDE=\"$libpbdata_include\" \
-	PBBAM_INCLUDE=\"$pbbam_include\" \
-	HTSLIB_INCLUDE=\"$htslib_include\" \
-	HDF5_INCLUDE=\"$hdf5_include\" \
-	BOOST_INCLUDE=\"$boost_include\" \
+        LIBBLASR_INC=\"$libblasr_include\" \
+        LIBPBIHDF_INC=\"$libpbihdf_include\" \
+        LIBPBDATA_INC=\"$libpbdata_include\" \
+        PBBAM_INC=\"$pbbam_include\" \
+        HTSLIB_INC=\"$htslib_include\" \
+        HDF5_INC=\"$hdf5_include\" \
+        BOOST_INC=\"$boost_include\" \
 	\
 	LIBBLASR_LIB=\"$libblasr_libdir\" \
 	LIBPBIHDF_LIB=\"$libpbihdf_libdir\" \
