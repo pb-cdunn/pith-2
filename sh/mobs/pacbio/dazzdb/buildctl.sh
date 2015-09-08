@@ -22,33 +22,47 @@ set_globals() {
         g_ar_exe=$MOBS_gcc__ar_exe
         #g_python_exe=$MOBS_python__python_exe
 
-        eval g_srcdir_abs="\$MOBS_${g_name}__src_dir"
-        eval g_outdir_abs="\$MOBS_${g_name}__output_dir"
+        eval g_srcdir="\$MOBS_${g_name}__src_dir"
         eval g_outdir="\$MOBS_${g_name}__output_dir"
-        eval g_installbuild_dir_abs="\$MOBS_${g_name}__install_dir"
         eval g_installbuild_dir="\$MOBS_${g_name}__install_dir"
-        eval g_installunittest_dir_abs="\$MOBS_${g_name}__installunittest_dir"
         eval g_installunittest_dir="\$MOBS_${g_name}__installunittest_dir"
 
         eval g_binwrap_build_dir="\$MOBS_${g_name}__install_binwrapbuild_dir"
 
         # For binwrap-build directory:
         build_topdir=$MOBS_global__build_topdir;
+
+        g_builddir="$g_outdir"/build
+        mkdir -p "$g_builddir"
+}
+
+configure() {
+    cat << EOF > $g_builddir/makefile
+PREFIX:=$g_installbuild_dir
+CC:=$g_gcc_exe
+AR:=$g_ar_exe
+include $g_srcdir/GNUmakefile
+EOF
 }
 
 clean_cmd() {
-    cmd="$g_make_exe -C $g_srcdir_abs clean"
+    # For now, clean original srcdir too, since people might still have objs there.
+    cmd="$g_make_exe -C $g_srcdir clean"
+    $cmd
+    cmd="rm -rf $g_outdir"
     $cmd
 }
 
 build_cmd() {
-    cmd="$g_make_exe -C $g_srcdir_abs -j4 CC=$g_gcc_exe AR=$g_ar_exe"
+    configure
+    cmd="$g_make_exe -C $g_builddir -j4"
     $cmd
 }
 
 install_cmd() {
     mkdir -p "$g_installbuild_dir/bin"
-    cmd="$g_make_exe -C $g_srcdir_abs install PREFIX=$g_installbuild_dir"
+    mkdir -p "$g_installbuild_dir/lib"
+    cmd="$g_make_exe -C $g_builddir install"
     $cmd
 }
 
