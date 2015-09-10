@@ -45,6 +45,7 @@ set_globals() {
 
 clean() {
     echo "Running $g_name 'clean' target..."
+    ${g_make_exe} -C "${g_srcdir_abs}" clean
     rm -rf "${g_outdir}"
 }
 cleanall() {
