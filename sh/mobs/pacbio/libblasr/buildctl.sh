@@ -177,6 +177,10 @@ install_build() {
 	mkdir -p "$g_installbuild_dir/include/alignment/$i"
 	cp -a "${g_srcdir_abs}/$i"/*.hpp "$g_installbuild_dir/include/alignment/$i"
     done
+
+    mkdir -p "$g_installbuild_dir/include/alignment/query"
+    cp -a "${g_srcdir_abs}/query"/*.h "$g_installbuild_dir/include/alignment/query"
+
     for i in tuples datastructures/alignment; do
 	mkdir -p "$g_installbuild_dir/include/alignment/$i"
 	cp -a "${g_srcdir_abs}/$i"/*.h "$g_installbuild_dir/include/alignment/$i"
