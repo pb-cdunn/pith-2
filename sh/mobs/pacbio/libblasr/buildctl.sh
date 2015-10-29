@@ -29,7 +29,7 @@ set_globals() {
 	g_gtest_rootdir_abs=$MOBS_gtest__root_dir
 	
 
-	eval g_srcdir_abs="\$MOBS_${g_name}__src_dir"
+        eval g_srcdir="\$MOBS_${g_name}__src_dir"
 	eval g_outdir_abs="\$MOBS_${g_name}__output_dir"
 	eval g_outdir="\$MOBS_${g_name}__output_dir"
 	eval g_installbuild_dir_abs="\$MOBS_${g_name}__install_dir"
@@ -43,7 +43,7 @@ set_globals() {
     mkdir -p "$g_unittest_outdir"
 
     g_conf_cmd='
-	"$g_srcdir_abs"/../configure.py
+        "$g_srcdir"/../configure.py
     '
     g_conf_cmd=$(echo $g_conf_cmd)
 }
@@ -82,7 +82,7 @@ build() {
 	shared_flag="SHARED_LIB=true"
 set -x
     cd "$g_builddir"
-    ln -sf "$g_srcdir_abs"/makefile makefile
+    ln -sf "$g_srcdir"/makefile makefile
     # build
     eval "$g_conf_cmd" \
         CXX="${g_gxx_exe}" \
@@ -116,7 +116,7 @@ build_unittest() {
 	shared_flag="SHARED_LIB=true"
 set -x
     cd "$g_unittest_outdir"
-    ln -sf "$g_srcdir_abs"/../unittest/makefile makefile
+    ln -sf "$g_srcdir"/../unittest/makefile makefile
     eval "$g_conf_cmd" \
         CXX="${g_gxx_exe}" \
         AR="${g_ar_exe}" \
@@ -183,15 +183,15 @@ install_build() {
     #        we need to export to other programs that depend on libblasr??
     for i in . utils statistics tuples format files suffixarray ipc bwt datastructures/anchoring datastructures/alignment datastructures/alignmentset algorithms/alignment algorithms/compare algorithms/sorting algorithms/alignment/sdp algorithms/anchoring simulator; do
 	mkdir -p "$g_installbuild_dir/include/alignment/$i"
-	cp -a "${g_srcdir_abs}/$i"/*.hpp "$g_installbuild_dir/include/alignment/$i"
+        cp -a "${g_srcdir}/$i"/*.hpp "$g_installbuild_dir/include/alignment/$i"
     done
 
     mkdir -p "$g_installbuild_dir/include/alignment/query"
-    cp -a "${g_srcdir_abs}/query"/*.h "$g_installbuild_dir/include/alignment/query"
+    cp -a "${g_srcdir}/query"/*.h "$g_installbuild_dir/include/alignment/query"
 
     for i in tuples datastructures/alignment; do
 	mkdir -p "$g_installbuild_dir/include/alignment/$i"
-	cp -a "${g_srcdir_abs}/$i"/*.h "$g_installbuild_dir/include/alignment/$i"
+        cp -a "${g_srcdir}/$i"/*.h "$g_installbuild_dir/include/alignment/$i"
     done
 
     # (The following is basically copied from blasr/build.ctl.)
