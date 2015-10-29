@@ -180,7 +180,7 @@ set -x
 	PBBAM_INC="${g_outdir_abs}/deplinks/pbbam/include" \
 	LIBPBDATA_INC="${g_outdir_abs}/deplinks/libpbdata/include" \
 	LIBPBIHDF_INC="${g_outdir_abs}/deplinks/libpbihdf/include/hdf" \
-	LIBBLASR_INC="${g_installbuild_dir}/include/alignment" \
+	LIBBLASR_INC="${g_srcdir}" \
 	HDF5_INC="${g_outdir_abs}/deplinks/hdf5/include" \
 	HDF5_LIB="${g_outdir_abs}/deplinks/hdf5/lib/" \
 	ZLIB_LIB="${g_outdir_abs}/deplinks/zlib/lib/" \
@@ -188,7 +188,7 @@ set -x
 	PBBAM_LIB="${g_outdir_abs}/deplinks/pbbam/lib/" \
 	LIBPBDATA_LIB="${g_outdir_abs}/deplinks/libpbdata/lib/" \
 	LIBPBIHDF_LIB="${g_outdir_abs}/deplinks/libpbihdf/lib/" \
-	LIBBLASR_LIB="${g_installbuild_dir}/lib/" \
+	LIBBLASR_LIB="${g_builddir}/" \
 	${1+"$@"}
 
     eval "$g_make_exe" -C "$g_unittest_outdir" \
