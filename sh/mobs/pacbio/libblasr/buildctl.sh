@@ -107,9 +107,10 @@ set -x
         -j4 \
         libblasr.so
 set +x
+    build_unittest
 }
 
-unittest() {
+build_unittest() {
     echo "Running $g_name 'unittest' target..."
     
 	shared_flag="SHARED_LIB=true"
@@ -122,6 +123,7 @@ set -x
 	"${shared_flag}" \
 	GTEST_SRCDIR="$g_gtest_rootdir_abs/fused-src" \
 	GTEST_INC="$g_gtest_rootdir_abs/fused-src" \
+    GCC_LIB=\"$g_gcc_runtime_libdir_abs\" \
 	BOOST_INC="${g_outdir_abs}/deplinks/boost/include" \
 	HTSLIB_INC="${g_outdir_abs}/deplinks/htslib/include" \
 	PBBAM_INC="${g_outdir_abs}/deplinks/pbbam/include" \
@@ -129,7 +131,6 @@ set -x
 	LIBPBIHDF_INC="${g_outdir_abs}/deplinks/libpbihdf/include/hdf" \
 	LIBBLASR_INC="${g_installbuild_dir}/include/alignment" \
 	HDF5_INC="${g_outdir_abs}/deplinks/hdf5/include" \
-    GCC_LIB=\"$g_gcc_runtime_libdir_abs\" \
 	HDF5_LIB="${g_outdir_abs}/deplinks/hdf5/lib/" \
 	ZLIB_LIB="${g_outdir_abs}/deplinks/zlib/lib/" \
 	HTSLIB_LIB="${g_outdir_abs}/deplinks/htslib/lib/" \
@@ -141,7 +142,7 @@ set -x
 
     eval "$g_make_exe" -C "$g_unittest_outdir" \
         -j4 \
-        gtest
+        all
 set +x
 
     # clean installunittest dir ~hm
@@ -152,6 +153,13 @@ set +x
     # Copy unittest xml results dir ~hm
     # but they are the same file! ~cd
     #cp -a "$g_unittest_outdir/xml"  "$g_installunittest_dir"
+}
+unittest() {
+    build_unittest
+set -x
+    eval "$g_make_exe" -C "$g_unittest_outdir" \
+        gtest
+set +x
 }
 
 install_build() {
@@ -185,6 +193,14 @@ install_build() {
 	mkdir -p "$g_installbuild_dir/include/alignment/$i"
 	cp -a "${g_srcdir_abs}/$i"/*.h "$g_installbuild_dir/include/alignment/$i"
     done
+
+    # (The following is basically copied from blasr/build.ctl.)
+
+    # install bin executables
+    mkdir "$g_installbuild_dir/bin"
+    #build_dir="${g_outdir}"/build
+    unittest_dir="${g_outdir}"/unittest
+    cp -a "${unittest_dir}/libblasr-test-runner"  "$g_installbuild_dir/bin"
 }
 install_prod() {
     echo "Running $g_name 'install-prod' target..."
