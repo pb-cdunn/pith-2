@@ -29,7 +29,7 @@ set_globals() {
 	g_gtest_rootdir_abs=$MOBS_gtest__root_dir
 	
 
-        eval g_srcdir="\$MOBS_${g_name}__src_dir"
+	eval g_srcdir="\$MOBS_${g_name}__src_dir"
 	eval g_outdir_abs="\$MOBS_${g_name}__output_dir"
 	eval g_outdir="\$MOBS_${g_name}__output_dir"
 	eval g_installbuild_dir_abs="\$MOBS_${g_name}__install_dir"
@@ -37,13 +37,64 @@ set_globals() {
 	eval g_installunittest_dir_abs="\$MOBS_${g_name}__installunittest_dir"
 	eval g_installunittest_dir="\$MOBS_${g_name}__installunittest_dir"
 
-    g_builddir="$g_outdir/build"
+    ### bincrapper
+    ###
+	eval g_binwrap_build_dir="\$MOBS_${g_name}__install_binwrapbuild_dir"
+
+	# For binwrap-build directory:
+	build_topdir=$MOBS_global__build_topdir;
+
+	# Compute the path to the dependency lib dirs, relative to the top
+	# of the build tree
+	g_libblasr_build_runtime_libdir_reltop=${MOBS_libblasr__runtimelib_dir#$build_topdir/}
+	g_libpbihdf_build_runtime_libdir_reltop=${MOBS_libpbihdf__runtimelib_dir#$build_topdir/}
+	g_libpbdata_build_runtime_libdir_reltop=${MOBS_libpbdata__runtimelib_dir#$build_topdir/}
+	g_pbbam_build_runtime_libdir_reltop=${MOBS_pbbam__runtimelib_dir#$build_topdir/}
+	g_htslib_build_runtime_libdir_reltop=${MOBS_htslib__runtimelib_dir#$build_topdir/}
+	g_hdf5_build_runtime_libdir_reltop=${MOBS_hdf5__runtimelib_dir#$build_topdir/}
+	g_zlib_build_runtime_libdir_reltop=${MOBS_zlib__runtimelib_dir#$build_topdir/}
+	g_gcc_build_runtime_libdir_reltop=${MOBS_gcc__runtimelib_dir#$build_topdir/}
+
+	# For binwrap-deploy directory:
+	g_libblasr_deploy_runtime_libdir_reltop="pacbio/libblasr/lib"
+	g_libpbihdf_deploy_runtime_libdir_reltop="pacbio/libpbihdf/lib"
+	g_libpbdata_deploy_runtime_libdir_reltop="pacbio/libpbdata/lib"
+	g_pbbam_deploy_runtime_libdir_reltop="pacbio/pbbam/lib"
+	g_htslib_deploy_runtime_libdir_reltop="pacbio/htslib/lib"
+	g_hdf5_deploy_runtime_libdir_reltop="thirdparty/hdf5/hdf5-1.8.12/lib"
+	g_zlib_deploy_runtime_libdir_reltop="thirdparty/zlib/zlib_1.2.8/lib"
+	g_gcc_deploy_runtime_libdir_reltop="thirdparty/gcc/gcc-4.8.4/lib"
+
+	# The deploy topdir is effectively the 'private' directory
+    # TODO(CD): Should this have more dot-dots?
+	g_deploy_topdir_relprog="../../.."
+
+
+	echo "Computing reltop..."
+	binwrap_reltop=${g_binwrap_build_dir#$build_topdir/}
+	top_relbinwrap=""
+	if [[ $binwrap_reltop =~ ^/ ]]; then
+	    merror "Could not compute topdir (binwrap not under topdir)"
+	fi
+
+	while [[ x"$binwrap_reltop" != x"." ]] ; do
+	    if [[ x"$binwrap_reltop" == x"/" ]] ; then
+		minterror "Error in computing topdir."
+	    fi
+	    top_relbinwrap="$top_relbinwrap/..";
+	    binwrap_reltop=$(dirname "$binwrap_reltop");
+	done
+	top_relbinwrap=${top_relbinwrap#/};
+	g_build_topdir_relprog="$top_relbinwrap"
+    ###
+
+    g_builddir="$g_outdir"/build
     mkdir -p "$g_builddir"
-    g_unittest_outdir="$g_outdir/unittest"
+    g_unittest_outdir="$g_outdir"/unittest
     mkdir -p "$g_unittest_outdir"
 
     g_conf_cmd='
-        "$g_srcdir"/../configure.py
+	"$g_srcdir"/../configure.py
     '
     g_conf_cmd=$(echo $g_conf_cmd)
 }
@@ -183,7 +234,7 @@ install_build() {
     #        we need to export to other programs that depend on libblasr??
     for i in . utils statistics tuples format files suffixarray ipc bwt datastructures/anchoring datastructures/alignment datastructures/alignmentset algorithms/alignment algorithms/compare algorithms/sorting algorithms/alignment/sdp algorithms/anchoring simulator; do
 	mkdir -p "$g_installbuild_dir/include/alignment/$i"
-        cp -a "${g_srcdir}/$i"/*.hpp "$g_installbuild_dir/include/alignment/$i"
+	cp -a "${g_srcdir}/$i"/*.hpp "$g_installbuild_dir/include/alignment/$i"
     done
 
     mkdir -p "$g_installbuild_dir/include/alignment/query"
@@ -191,7 +242,7 @@ install_build() {
 
     for i in tuples datastructures/alignment; do
 	mkdir -p "$g_installbuild_dir/include/alignment/$i"
-        cp -a "${g_srcdir}/$i"/*.h "$g_installbuild_dir/include/alignment/$i"
+	cp -a "${g_srcdir}/$i"/*.h "$g_installbuild_dir/include/alignment/$i"
     done
 
     # (The following is basically copied from blasr/build.ctl.)
@@ -201,6 +252,50 @@ install_build() {
     #build_dir="${g_outdir}"/build
     unittest_dir="${g_outdir}"/unittest
     cp -a "${unittest_dir}/libblasr-test-runner"  "$g_installbuild_dir/bin"
+
+
+    # Create the binwrap dir
+	echo "Creating the binwrap-build wrappers..."
+	rm -rf "$g_installbuild_dir/binwrap-build"
+	mkdir -p "$g_installbuild_dir/binwrap-build"
+    rm -rf "$g_installbuild_dir/binwrap-deploy"
+    mkdir -p "$g_installbuild_dir/binwrap-deploy"
+
+    # Create the binwrap wrappers (using the blasr template)
+	binwrap_tmpl="$g_progdir/../blasr/infiles/blasr-binwrap.sh.tmpl"
+	prognames=""
+	prognames="$prognames libblasr-test-runner"
+	for i in $prognames; do
+	    # build binwrap:
+	    sed \
+		-e "s,%PROGNAME%,$i," \
+		-e "s,%TOPDIR_RELPROG%,$g_build_topdir_relprog," \
+		-e "s,%LIBBLASR_RUNTIMELIB_RELTOP%,$g_libblasr_build_runtime_libdir_reltop," \
+		-e "s,%LIBPBIHDF_RUNTIMELIB_RELTOP%,$g_libpbihdf_build_runtime_libdir_reltop," \
+		-e "s,%LIBPBDATA_RUNTIMELIB_RELTOP%,$g_libpbdata_build_runtime_libdir_reltop," \
+		-e "s,%PBBAM_RUNTIMELIB_RELTOP%,$g_pbbam_build_runtime_libdir_reltop," \
+		-e "s,%HTSLIB_RUNTIMELIB_RELTOP%,$g_htslib_build_runtime_libdir_reltop," \
+		-e "s,%HDF5_RUNTIMELIB_RELTOP%,$g_hdf5_build_runtime_libdir_reltop," \
+		-e "s,%ZLIB_RUNTIMELIB_RELTOP%,$g_zlib_build_runtime_libdir_reltop," \
+		-e "s,%GCC_RUNTIMELIB_RELTOP%,$g_gcc_build_runtime_libdir_reltop," \
+		"$binwrap_tmpl" > "$g_installbuild_dir/binwrap-build/$i"
+	    chmod a+x "$g_installbuild_dir/binwrap-build/$i"
+
+	    # deploy binwrap:
+		sed \
+		    -e "s,%PROGNAME%,$i," \
+		    -e "s,%TOPDIR_RELPROG%,$g_deploy_topdir_relprog," \
+		    -e "s,%LIBBLASR_RUNTIMELIB_RELTOP%,$g_libblasr_deploy_runtime_libdir_reltop," \
+		    -e "s,%LIBPBIHDF_RUNTIMELIB_RELTOP%,$g_libpbihdf_deploy_runtime_libdir_reltop," \
+		    -e "s,%LIBPBDATA_RUNTIMELIB_RELTOP%,$g_libpbdata_deploy_runtime_libdir_reltop," \
+		    -e "s,%PBBAM_RUNTIMELIB_RELTOP%,$g_pbbam_deploy_runtime_libdir_reltop," \
+		    -e "s,%HTSLIB_RUNTIMELIB_RELTOP%,$g_htslib_deploy_runtime_libdir_reltop," \
+		    -e "s,%HDF5_RUNTIMELIB_RELTOP%,$g_hdf5_deploy_runtime_libdir_reltop," \
+		    -e "s,%ZLIB_RUNTIMELIB_RELTOP%,$g_zlib_deploy_runtime_libdir_reltop," \
+		    -e "s,%GCC_RUNTIMELIB_RELTOP%,$g_gcc_deploy_runtime_libdir_reltop," \
+		    "$binwrap_tmpl" > "$g_installbuild_dir/binwrap-deploy/$i"
+		chmod a+x "$g_installbuild_dir/binwrap-deploy/$i"
+	done
 }
 install_prod() {
     echo "Running $g_name 'install-prod' target..."
