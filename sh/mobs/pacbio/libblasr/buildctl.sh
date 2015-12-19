@@ -269,7 +269,7 @@ install_build() {
 	    # build binwrap:
 	    sed \
 		-e "s,%PROGNAME%,$i," \
-		-e "s,%TOPDIR_RELPROG%,$g_build_topdir_relprog," \
+		-e "s,%TOPDIR_RELPROG%,$g_build_topdir_relprog/../../../../../../../../..," \
 		-e "s,%LIBBLASR_RUNTIMELIB_RELTOP%,$g_libblasr_build_runtime_libdir_reltop," \
 		-e "s,%LIBPBIHDF_RUNTIMELIB_RELTOP%,$g_libpbihdf_build_runtime_libdir_reltop," \
 		-e "s,%LIBPBDATA_RUNTIMELIB_RELTOP%,$g_libpbdata_build_runtime_libdir_reltop," \
