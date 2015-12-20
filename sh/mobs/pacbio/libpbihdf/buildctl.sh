@@ -78,7 +78,6 @@ set -x
 	BOOST_INC="${g_outdir}/deplinks/boost/include" \
 	HTSLIB_INC="${g_outdir}/deplinks/htslib/include" \
 	PBBAM_INC="${g_outdir}/deplinks/pbbam/include" \
-	LIBPBDATA_INC="${g_outdir}/deplinks/libpbdata/include" \
 	HDF5_INC="${g_outdir}/deplinks/hdf5/include" \
     GCC_LIB=\"$g_gcc_runtime_libdir_abs\" \
 	HDF5_LIB="${g_outdir}/deplinks/hdf5/lib" \

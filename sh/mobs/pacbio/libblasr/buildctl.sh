@@ -143,8 +143,6 @@ set -x
 	BOOST_INC="${g_outdir_abs}/deplinks/boost/include" \
 	HTSLIB_INC="${g_outdir_abs}/deplinks/htslib/include" \
 	PBBAM_INC="${g_outdir_abs}/deplinks/pbbam/include" \
-	LIBPBDATA_INC="${g_outdir_abs}/deplinks/libpbdata/include" \
-	LIBPBIHDF_INC="${g_outdir_abs}/deplinks/libpbihdf/include/hdf" \
 	HDF5_INC="${g_outdir_abs}/deplinks/hdf5/include" \
 	HDF5_LIB="${g_outdir_abs}/deplinks/hdf5/lib/" \
 	ZLIB_LIB="${g_outdir_abs}/deplinks/zlib/lib/" \
