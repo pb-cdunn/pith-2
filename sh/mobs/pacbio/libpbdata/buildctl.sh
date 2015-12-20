@@ -94,21 +94,22 @@ install_build() {
 
     # install libs
     mkdir "$g_installbuild_dir/lib"
-	cp -a "${g_builddir}/${g_name}.so"  "$g_installbuild_dir/lib"
+    cp -a "${g_builddir}/${g_name}.so"  "$g_installbuild_dir/lib"
 
     # install includes
-    mkdir -p "$g_installbuild_dir/include"        
-    for i in . alignment amos loadpulses matrix metagenome qvs reads saf sam utils; do
-	mkdir -p "$g_installbuild_dir/include/$i"
-	cp -a "${g_srcdir_abs}/$i"/*.hpp "$g_installbuild_dir/include/$i"
-    done
-    for i in . sam; do
-	mkdir -p "$g_installbuild_dir/include/$i"
-	cp -a "${g_srcdir_abs}/$i"/*.h "$g_installbuild_dir/include/$i"
-    done
+    include_dir="$g_installbuild_dir/include"
+    mkdir -p "$include_dir"
+    cmd="BLASR_INC=$include_dir make -f $g_srcdir_abs/../makefile install-includes"
+    eval "$cmd"
 
-    # Also copy our generated header.
-        cp -a libconfig.h "$g_installbuild_dir/include/libconfig.h"
+    # also install includes into include/blasr, for future changes
+    include_dir="$g_installbuild_dir/include/blasr"
+    mkdir -p "$include_dir"
+    cmd="BLASR_INC=$include_dir make -f $g_srcdir_abs/../makefile install-includes"
+    eval "$cmd"
+
+    # finally, for old stuff, copy the contents of include/blasr/pbdata/ into include/
+    rsync -a "$g_installbuild_dir/include/blasr/pbdata/" "$g_installbuild_dir/include/"
 }
 install_prod() {
     echo "Running $g_name 'install-prod' target..."

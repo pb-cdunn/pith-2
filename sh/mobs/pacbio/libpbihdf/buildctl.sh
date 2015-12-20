@@ -108,12 +108,16 @@ install_build() {
 	cp -a "${g_builddir}/${g_name}.so"  "$g_installbuild_dir/lib"
 
     # install includes
-    mkdir -p "$g_installbuild_dir/include"
-    for i in . ; do
-	mkdir -p "$g_installbuild_dir/include/hdf/$i"
-	cp -a "${g_srcdir_abs}/$i"/*.hpp "$g_installbuild_dir/include/hdf/$i"
-    done
+    include_dir="$g_installbuild_dir/include"
+    mkdir -p "$include_dir"
+    cmd="BLASR_INC=$include_dir make -f $g_srcdir_abs/../makefile install-includes"
+    eval "$cmd"
 
+    # also install includes into include/blasr, for future changes
+    include_dir="$g_installbuild_dir/include/blasr"
+    mkdir -p "$include_dir"
+    cmd="BLASR_INC=$include_dir make -f $g_srcdir_abs/../makefile install-includes"
+    eval "$cmd"
 }
 install_prod() {
     echo "Running $g_name 'install-prod' target..."

@@ -124,31 +124,13 @@ build() {
 	shared_libopt="-Wl,-Bdynamic"
 	shared_flag="SHARED_LIB=true STATIC="
 
-    libblasr_includes="${g_outdir}/deplinks/libblasr/include;${g_outdir}/deplinks/libblasr/include/alignment"
-    libpbihdf_includes="${g_outdir}/deplinks/libpbihdf/include;${g_outdir}/deplinks/libpbihdf/include/hdf"
-    libpbdata_includes="${g_outdir}/deplinks/libpbdata/include"
-    pbbam_includes="${g_outdir}/deplinks/pbbam/include"
-    htslib_includes="${g_outdir}/deplinks/htslib/include"
-    hdf5_includes="${g_outdir}/deplinks/hdf5/include"
-    boost_includes="${g_outdir}/deplinks/boost/include"
-
-    # FIXME: HACK to only provide the single include directories that blasr
-    #        needs for libblasr, libpbihdf and boost.   Other things that 
-    #        depend on those libraries require two versions of the include
-    #        directories (probably because they inconsistently use the 
-    #        directory prefix becasue they are poking into the source
-    #        tree for the include files).  The makefile for blasr should
-    #        probably handle multilple directories regardless, just to handle
-    #        the general case, but the other builds and the include files
-    #        provided to mobs should also be fixed to use just a single 
-    #        directory.
-    libblasr_include=${libblasr_includes#*;}
-    libpbihdf_include=${libpbihdf_includes#*;}
-    libpbdata_include=$libpbdata_includes
-    pbbam_include=$pbbam_includes
-    htslib_include=$htslib_includes
-    hdf5_include=$hdf5_includes
-    boost_include=${boost_includes}
+    libblasr_include="${g_outdir}/deplinks/libblasr/include/blasr/alignment"
+    libpbihdf_include="${g_outdir}/deplinks/libpbihdf/include/blasr/hdf"
+    libpbdata_include="${g_outdir}/deplinks/libpbdata/include/blasr/pbdata"
+    pbbam_include="${g_outdir}/deplinks/pbbam/include"
+    htslib_include="${g_outdir}/deplinks/htslib/include"
+    hdf5_include="${g_outdir}/deplinks/hdf5/include"
+    boost_include="${g_outdir}/deplinks/boost/include"
 
     libblasr_libdir="${g_outdir}/deplinks/libblasr/lib"
     libpbihdf_libdir="${g_outdir}/deplinks/libpbihdf/lib"

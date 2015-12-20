@@ -29,7 +29,7 @@ set_globals() {
 	g_gtest_rootdir_abs=$MOBS_gtest__root_dir
 	
 
-	eval g_srcdir="\$MOBS_${g_name}__src_dir"
+	eval g_srcdir_abs="\$MOBS_${g_name}__src_dir"
 	eval g_outdir_abs="\$MOBS_${g_name}__output_dir"
 	eval g_outdir="\$MOBS_${g_name}__output_dir"
 	eval g_installbuild_dir_abs="\$MOBS_${g_name}__install_dir"
@@ -94,7 +94,7 @@ set_globals() {
     mkdir -p "$g_unittest_outdir"
 
     g_conf_cmd='
-	"$g_srcdir"/../configure.py
+	"$g_srcdir_abs"/../configure.py
     '
     g_conf_cmd=$(echo $g_conf_cmd)
 }
@@ -133,7 +133,7 @@ build() {
 	shared_flag="SHARED_LIB=true"
 set -x
     cd "$g_builddir"
-    ln -sf "$g_srcdir"/makefile makefile
+    ln -sf "$g_srcdir_abs"/makefile makefile
     # build
     eval "$g_conf_cmd" \
         CXX="${g_gxx_exe}" \
@@ -165,7 +165,7 @@ build_unittest() {
 	shared_flag="SHARED_LIB=true"
 set -x
     cd "$g_unittest_outdir"
-    ln -sf "$g_srcdir"/../unittest/makefile makefile
+    ln -sf "$g_srcdir_abs"/../unittest/makefile makefile
     eval "$g_conf_cmd" \
         CXX="${g_gxx_exe}" \
         AR="${g_ar_exe}" \
@@ -178,7 +178,7 @@ set -x
 	PBBAM_INC="${g_outdir_abs}/deplinks/pbbam/include" \
 	LIBPBDATA_INC="${g_outdir_abs}/deplinks/libpbdata/include" \
 	LIBPBIHDF_INC="${g_outdir_abs}/deplinks/libpbihdf/include/hdf" \
-	LIBBLASR_INC="${g_srcdir}" \
+	LIBBLASR_INC="${g_srcdir_abs}" \
 	HDF5_INC="${g_outdir_abs}/deplinks/hdf5/include" \
 	HDF5_LIB="${g_outdir_abs}/deplinks/hdf5/lib/" \
 	ZLIB_LIB="${g_outdir_abs}/deplinks/zlib/lib/" \
@@ -227,21 +227,19 @@ install_build() {
 	cp -a "${g_builddir}/${g_name}.so"  "$g_installbuild_dir/lib"
 
     # install includes
-    mkdir -p "$g_installbuild_dir/include"        
-    # FIXME: Is there a better way to specify all the include headers that
-    #        we need to export to other programs that depend on libblasr??
-    for i in . utils statistics tuples format files suffixarray ipc bwt datastructures/anchoring datastructures/alignment datastructures/alignmentset algorithms/alignment algorithms/compare algorithms/sorting algorithms/alignment/sdp algorithms/anchoring simulator; do
-	mkdir -p "$g_installbuild_dir/include/alignment/$i"
-	cp -a "${g_srcdir}/$i"/*.hpp "$g_installbuild_dir/include/alignment/$i"
-    done
+    include_dir="$g_installbuild_dir/include"
+    mkdir -p "$include_dir"
+    cmd="BLASR_INC=$include_dir make -f $g_srcdir_abs/../makefile install-includes"
+    eval "$cmd"
 
-    mkdir -p "$g_installbuild_dir/include/alignment/query"
-    cp -a "${g_srcdir}/query"/*.h "$g_installbuild_dir/include/alignment/query"
+    # also install includes into include/blasr, for future changes
+    include_dir="$g_installbuild_dir/include/blasr"
+    mkdir -p "$include_dir"
+    cmd="BLASR_INC=$include_dir make -f $g_srcdir_abs/../makefile install-includes"
+    eval "$cmd"
 
-    for i in tuples datastructures/alignment; do
-	mkdir -p "$g_installbuild_dir/include/alignment/$i"
-	cp -a "${g_srcdir}/$i"/*.h "$g_installbuild_dir/include/alignment/$i"
-    done
+    # finally, for old stuff, copy the contents of include/blasr/alignment/ into include/
+    #rsync -a "$g_installbuild_dir/include/blasr/alignment/" "$g_installbuild_dir/include/"
 
     # (The following is basically copied from blasr/build.ctl.)
 
