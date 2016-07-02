@@ -1,0 +1,46 @@
+# vim: syntax=conf
+local modname=hgapg
+local modname_short=${modname%%_*}
+v_setvar "$modname" internal provides "$modname_short"
+
+local builddeps="
+    make
+    golang
+";
+v_setvar "$modname" internal builddeps "$builddeps"
+
+local buildctl_sh="$g_build_topdir/bioinformatics/ext/pi/pith/sh/mobs/pacbio/$modname/buildctl.sh"
+
+local installdir_reltop="bioinformatics/ext/pi/$modname"
+local outputdir_abs="$g_output_topdir/$installdir_reltop/$g_output_dirname"
+local rootdir_reltop="bioinformatics/ext/pi/$modname"
+local srcdir_abs="$g_build_topdir/$rootdir_reltop"
+local builddir_abs="$g_build_topdir/build/3.x/buildctl/pacbio/$modname_short"
+local installdir_abs="$outputdir_abs/install"
+local installunittestdir_abs="$outputdir_abs/unittest"
+
+v_setvar "$modname" output output_dir "$outputdir_abs"
+v_setvar "$modname" output src_dir "$srcdir_abs"
+v_setvar "$modname" output build_dir "$builddir_abs"
+v_setvar "$modname" output install_dir "$installdir_abs"
+v_setvar "$modname" output install_include_dir "$installdir_abs/include"
+v_setvar "$modname" output install_lib_dir "$installdir_abs/lib"
+v_setvar "$modname" output installunittest_dir "$installunittestdir_abs"
+v_setvar "$modname" output install_binwrapbuild_dir "$installdir_abs/binwrap-build"
+
+v_setvar "$modname" internal clean_cmd "bash $buildctl_sh clean"
+v_setvar "$modname" internal build_cmd "bash $buildctl_sh build install"
+v_setvar "$modname" internal unittest_cmd "bash $buildctl_sh build install unittest"
+
+
+# Checks for skipping builds (for incremental builds)
+# This will generate $modname.infilestat.prebuild.out
+#v_setvar "$modname" buildstate-prebuild infilestat "find $buildctl_sh $srcdir_abs -path $outputdir_abs -prune -o ! -type d -printf '%T@,%m,%s,%y,%p,%l\n' | sort -n"
+v_setvar "$modname" buildstate-prebuild infilestat "{ find $buildctl_sh -printf '%T@,%m,%s,%y,%p,%l\n' | sort -n; }"
+
+# This will generate $modname.vardump.prebuild.out
+v_setvar "$modname" buildstate-prebuild vardump "v_printmodvars ${modname%%_*}"
+
+# This will generate $modname.outfilestat.postbuild.out
+mkdir -p "$installdir_abs"
+v_setvar "$modname" buildstate-postbuild outfilestat "find $installdir_abs ! -type d -printf '%T@,%m,%s,%y,%p,%l\n' | sort -n"
