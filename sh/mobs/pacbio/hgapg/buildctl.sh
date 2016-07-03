@@ -46,7 +46,10 @@ build:
 	mkdir -p src
 	ln -sf $g_srcdir src/
 	go install hgapg/mains/hello
-	cd src/hgapg/tests; go test -v
+	#cd src/hgapg/tests; go test -v
+	#go test -v './src/hgapg/...'
+	go test -v 'hgapg/tests'
+	go vet -v -x 'hgapg/tests'
 EOF
 }
 
