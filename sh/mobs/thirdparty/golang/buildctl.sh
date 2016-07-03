@@ -34,12 +34,9 @@ set_globals() {
 
 configure() {
     cat << EOF > $g_builddir/makefile
-#PREFIX:=$g_installbuild_dir
-#CC:=$g_gcc_exe
-#AR:=$g_ar_exe
-#include $g_srcdir/GNUmakefile
-ROOT=/scratch/mobs/golang/go1.6.2
+SRCDIR=$g_srcdir
 TARBALL=$g_srcdir/go1.6.2.linux-amd64.tar.gz
+ROOT=/scratch/mobs/golang/go1.6.2
 SYMROOT=$g_installbuild_dir
 
 install:
@@ -51,29 +48,26 @@ EOF
 }
 
 clean_cmd() {
-    # For now, clean original srcdir too, since people might still have objs there.
-    cmd="$g_make_exe -C $g_srcdir clean"
-    $cmd
-    cmd="rm -rf $g_outdir"
+    local cmd="rm -rf $g_outdir"
     $cmd
 }
 
 build_cmd() {
-    configure
-    cmd="$g_make_exe -C $g_builddir -j4"
-    $cmd
+    echo "nothing to build"
 }
 
 install_cmd() {
-    echo "nothing to install"
-    #mkdir -p "$g_installbuild_dir/bin"
-    #mkdir -p "$g_installbuild_dir/lib"
-    #cmd="$g_make_exe -C $g_builddir install"
-    #$cmd
+    configure
+    local cmd="$g_make_exe -C $g_builddir install"
+    $cmd
 }
 
 unittest_cmd() {
-    echo "no unittests"
+    local cmd
+    cmd="$g_installbuild_dir/go/bin/go env"
+    $cmd
+    local cmd="$g_installbuild_dir/go/bin/go version"
+    $cmd
 }
 
 # ---- main

@@ -34,7 +34,7 @@ set_globals() {
 
 configure() {
     cat << EOF > $g_builddir/makefile
-#GOROOT=/home/UNIXHOME/cdunn/repo/pb/smrtanalysis-client/smrtanalysis/_output/modulebuilds/bioinformatics/ext/pi/golang/_output/install/go
+SRCDIR=$g_srcdir
 GOROOT=$MOBS_golang__install_dir/go
 PATH:=\${GOROOT}/bin:\${PATH}
 GOPATH:=\$(shell pwd)
@@ -42,37 +42,36 @@ export GOROOT
 export GOPATH
 export PATH
 
-install:
+build:
 	mkdir -p src
 	ln -sf $g_srcdir src/
 	go install hgapg/mains/hello
+	cd src/hgapg/tests; go test -v
 EOF
 }
 
 clean_cmd() {
-    # For now, clean original srcdir too, since people might still have objs there.
-    cmd="$g_make_exe -C $g_srcdir clean"
-    $cmd
-    cmd="rm -rf $g_outdir"
+    local cmd="rm -rf $g_outdir"
     $cmd
 }
 
 build_cmd() {
     configure
-    cmd="$g_make_exe -C $g_builddir -j4"
+    local cmd="$g_make_exe -C $g_builddir -j4"
     $cmd
 }
 
 install_cmd() {
-    echo "nothing to install"
     #mkdir -p "$g_installbuild_dir/bin"
     #mkdir -p "$g_installbuild_dir/lib"
-    #cmd="$g_make_exe -C $g_builddir install"
-    #$cmd
+    local cmd="rsync -av $g_builddir/bin $g_installbuild_dir/"
+    $cmd
 }
 
 unittest_cmd() {
-    echo "no unittests"
+    local cmd
+    cmd="$g_installbuild_dir/bin/hello"
+    $cmd
 }
 
 # ---- main
