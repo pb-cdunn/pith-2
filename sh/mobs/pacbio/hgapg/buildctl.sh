@@ -37,19 +37,15 @@ configure() {
 SRCDIR=$g_srcdir
 GOROOT=$MOBS_golang__install_dir/go
 PATH:=\${GOROOT}/bin:\${PATH}
-GOPATH:=\$(shell pwd)
+GOPATH:=\$(shell pwd):\${GOPATH}
 export GOROOT
 export GOPATH
 export PATH
 
 build:
-	mkdir -p src
-	ln -sf $g_srcdir src/
-	go install hgapg/mains/hello
-	#cd src/hgapg/tests; go test -v
-	#go test -v './src/hgapg/...'
-	go test -v 'hgapg/tests'
-	go vet -v -x 'hgapg/tests'
+	ln -sf "$g_srcdir/src" .
+	make -f "$g_srcdir/makefile" test
+	make -f "$g_srcdir/makefile" build
 EOF
 }
 
