@@ -182,7 +182,7 @@ if $opt_build; then
     l_cxx=""
     l_ar=""
     if $g_requires_gcc || $g_requires_gxx; then
-	g_gcc_rootdir="${g_topdir_abs}/prebuilt.out/3.x/gcc/gcc-4.8.4/libc-2.5"
+	g_gcc_rootdir="${g_topdir_abs}/prebuilt.out/3.x/gcc/gcc-4.9.2/libc-2.5"
 
 	if $g_requires_gcc; then
             # Querying python for LDFLAGS

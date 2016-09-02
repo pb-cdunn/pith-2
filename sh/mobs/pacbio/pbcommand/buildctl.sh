@@ -23,7 +23,7 @@ set_globals() {
     g_srcdir_abs="$g_topdir_abs/$g_rootdir_reltop"
     g_outdir_abs="$g_outdirtop_abs/$g_rootdir_reltop/_output"
 
-    g_git_rootdir="$g_outdirtop_abs/prebuilt.tmpout/git/git_2.4.5/libc-2.5/gcc-4.8.4/_output/install"
+    g_git_rootdir="$g_outdirtop_abs/prebuilt.tmpout/git/git_2.4.5/libc-2.5/gcc-4.9.2/_output/install"
     g_git_exe="${g_git_rootdir}/binwrap-build/git"
 
     g_git_remote_url=$(bash -c '. "'"$g_srcdir_abs/${g_name}"'.github.ish"; echo "$URL"')

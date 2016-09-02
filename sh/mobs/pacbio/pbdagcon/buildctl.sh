@@ -63,7 +63,7 @@ set -x
 	g_htslib_deploy_runtime_libdir_reltop="pacbio/htslib/lib"
 	g_hdf5_deploy_runtime_libdir_reltop="thirdparty/hdf5/hdf5-1.8.12/lib"
 	g_zlib_deploy_runtime_libdir_reltop="thirdparty/zlib/zlib_1.2.8/lib"
-	g_gcc_deploy_runtime_libdir_reltop="thirdparty/gcc/gcc-4.8.4/lib"
+	g_gcc_deploy_runtime_libdir_reltop="thirdparty/gcc/gcc-4.9.2/lib"
 
 	# The deploy topdir is effectively the 'private' directory
 	g_deploy_topdir_relprog="../../.."

@@ -46,7 +46,7 @@ v_setvar "$modname" internal clean_cmd "bash $buildctl_sh --mobs --clean"
 v_setvar "$modname" internal build_cmd "bash $buildctl_sh --mobs --install-build"
 
 # We use git to learn files or SHA1.
-g_git_rootdir="$g_build_topdir/prebuilt.tmpout/git/git_2.4.5/libc-2.5/gcc-4.8.4"
+g_git_rootdir="$g_build_topdir/prebuilt.tmpout/git/git_2.4.5/libc-2.5/gcc-4.9.2"
 g_git_exe="${g_git_rootdir}/bin/git"
 
 # Checks for skipping builds (for incremental builds)
